@@ -2602,13 +2602,16 @@ function setupAuthUI() {
     logoutBtn.className = "btn btn-outline";
     logoutBtn.addEventListener("click", logout);
 
-    const adminLink = document.createElement("a");
+    let adminLink = null;
     if (user.role === "admin") {
+      adminLink = document.createElement("a");
       adminLink.href = "admin.html";
       adminLink.textContent = "Admin";
       adminLink.className = "btn btn-outline";
-      adminLink.style.marginLeft = "0.35rem";
-      container.appendChild(adminLink);
+      const page = window.location.pathname.split("/").pop() || "";
+      if (page.toLowerCase() === "admin.html") {
+        adminLink.classList.add("active");
+      }
     }
 
     const loginLink = container.querySelector("a[href='login.html']");
@@ -2618,6 +2621,7 @@ function setupAuthUI() {
     if (registerLink) registerLink.remove();
 
     container.appendChild(userLbl);
+    if (adminLink) container.appendChild(adminLink);
     container.appendChild(logoutBtn);
   }
 }

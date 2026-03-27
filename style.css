@@ -57,6 +57,7 @@ a {
   justify-content: space-between;
   gap: 12px;
   padding: 0.9rem 0;
+  position: relative;
 }
 
 .logo {
@@ -108,6 +109,109 @@ a {
   background: transparent;
   color: var(--text);
   font-size: 1.2rem;
+}
+
+.admin-home-page .navbar {
+  background: linear-gradient(135deg, #ffffff 0%, #f4f9ff 100%);
+  border-bottom: 1px solid #d7e6ff;
+  box-shadow: 0 10px 26px rgba(17, 82, 147, 0.1);
+}
+
+.admin-home-page .logo {
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+.admin-home-page .nav-links {
+  gap: 0.55rem;
+}
+
+.admin-home-page .nav-links a {
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid #d8e6fb;
+  background: #ffffff;
+  color: #27476d;
+  font-weight: 600;
+}
+
+.admin-home-page .nav-links a:hover,
+.admin-home-page .nav-links a.active {
+  color: #ffffff;
+  border-color: #1976d2;
+  background: linear-gradient(135deg, #1976d2 0%, #135ea8 100%);
+}
+
+.admin-home-page .nav-user-label {
+  background: #edf5ff;
+  border: 1px solid #d6e7ff;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  color: #13395f;
+}
+
+.admin-home-page .nav-actions .btn {
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.admin-home-page .nav-actions .btn-outline {
+  border-color: #8bb7ea;
+  color: #0f4a83;
+  background: #f7fbff;
+}
+
+.admin-home-page .nav-actions .btn-outline:hover {
+  border-color: #1976d2;
+  color: #fff;
+  background: #1976d2;
+}
+
+.admin-home-page .nav-actions .btn-outline.active {
+  border-color: #1976d2;
+  color: #fff;
+  background: linear-gradient(135deg, #1976d2 0%, #135ea8 100%);
+}
+
+@media (min-width: 769px) {
+  .admin-home-page .nav-content {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  .admin-home-page .nav-links {
+    justify-content: center;
+    flex-wrap: nowrap;
+  }
+
+  .admin-home-page .nav-actions {
+    justify-content: flex-end;
+    align-items: center;
+  }
+
+  .admin-home-page .nav-user-label {
+    margin-right: 0.4rem;
+    max-width: 260px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1100px) {
+  .admin-home-page .nav-links a {
+    padding: 0.42rem 0.7rem;
+    font-size: 0.88rem;
+  }
+
+  .admin-home-page .nav-actions .btn {
+    padding: 0.56rem 0.8rem;
+  }
+
+  .admin-home-page .nav-user-label {
+    max-width: 190px;
+    font-size: 0.86rem;
+  }
 }
 
 .hero {
@@ -1618,29 +1722,36 @@ a {
   .nav-content {
     flex-wrap: wrap;
     row-gap: 0.5rem;
+    align-items: flex-start;
   }
 
   .nav-actions {
-    margin-left: auto;
+    margin-left: 0;
+    width: 100%;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 0.5rem;
-    max-width: 100%;
+    max-width: none;
+    flex-wrap: wrap;
   }
 
   .nav-actions .btn {
     padding: 0.5rem 0.75rem;
+    min-height: 40px;
   }
 
   .nav-user-label {
     margin-right: 0;
-    max-width: 160px;
+    order: -1;
+    width: 100%;
+    max-width: 100%;
     font-size: 0.9rem;
   }
 
   .nav-links {
     position: absolute;
-    top: 64px;
+    top: calc(100% + 2px);
+    left: 0;
     right: 0;
     background: #fff;
     width: 100%;
@@ -1654,6 +1765,72 @@ a {
 
   .nav-links.open {
     max-height: 260px;
+  }
+
+  .admin-nav-page .menu-toggler {
+    display: none;
+  }
+
+  .admin-nav-page .nav-links {
+    position: static;
+    order: 3;
+    left: auto;
+    right: auto;
+    top: auto;
+    background: transparent;
+    width: 100%;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-bottom: 0;
+    border-top: 1px solid var(--border);
+    padding-top: 0.55rem;
+    padding-bottom: 0.25rem;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .admin-nav-page .nav-links a {
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 999px;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .admin-nav-page .nav-links a.active {
+    border-color: #c8dcff;
+    background: #e3efff;
+    color: #115293;
+  }
+
+  .admin-nav-page .nav-links::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .admin-home-page .logo {
+    font-size: 1rem;
+  }
+
+  .admin-home-page .nav-actions .btn {
+    min-height: 42px;
+  }
+
+  .admin-home-page .nav-links a {
+    padding: 0.42rem 0.78rem;
+    font-size: 0.88rem;
+  }
+
+  .admin-home-page .nav-actions {
+    order: 2;
+  }
+
+  .admin-home-page .nav-links {
+    order: 3;
   }
 
   .menu-toggler {
