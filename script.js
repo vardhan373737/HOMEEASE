@@ -28,10 +28,52 @@ let bookingRefreshTimer = null;
 let bookingSseDisconnectCount = 0;
 let bookingFallbackPollTimer = null;
 let adminBookingSnapshot = [];
+let systemWarningBanner = null;
 const chatNotificationState = {
   provider: {},
   admin: {}
 };
+
+function showSystemWarning(message) {
+  const text = String(message || "").trim();
+  if (!text) return;
+
+  if (!systemWarningBanner) {
+    systemWarningBanner = document.createElement("div");
+    systemWarningBanner.id = "systemWarningBanner";
+    systemWarningBanner.style.position = "sticky";
+    systemWarningBanner.style.top = "0";
+    systemWarningBanner.style.zIndex = "9999";
+    systemWarningBanner.style.width = "100%";
+    systemWarningBanner.style.background = "#fff4e5";
+    systemWarningBanner.style.color = "#7a2e00";
+    systemWarningBanner.style.borderBottom = "1px solid #ffd7b0";
+    systemWarningBanner.style.padding = "10px 14px";
+    systemWarningBanner.style.fontWeight = "600";
+    systemWarningBanner.style.fontSize = "0.95rem";
+    systemWarningBanner.style.lineHeight = "1.35";
+  }
+
+  systemWarningBanner.textContent = text;
+  if (!systemWarningBanner.parentElement) {
+    document.body.prepend(systemWarningBanner);
+  }
+}
+
+async function checkSystemHealth() {
+  try {
+    const response = await fetch("/api/health", { cache: "no-store" });
+    if (!response.ok) return;
+
+    const health = await response.json();
+    const warnings = Array.isArray(health.warnings) ? health.warnings.filter(Boolean) : [];
+    if (!warnings.length) return;
+
+    showSystemWarning(`System notice: ${warnings[0]}`);
+  } catch (error) {
+    // Ignore health-check failure to avoid blocking page behavior.
+  }
+}
 
 function formatWhatsAppPhone(phone) {
   const digits = String(phone || "").replace(/\D/g, "");
@@ -2795,6 +2837,7 @@ function setupBookingLiveUpdates(page) {
 function init() {
   const page = window.location.pathname.split("/").pop();
   const user = getCurrentUser();
+  checkSystemHealth();
 
   const isHomePage = page === "index.html" || page === "";
   if (isHomePage && user && user.role === "provider") {

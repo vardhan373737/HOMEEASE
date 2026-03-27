@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
+const { v2: cloudinary } = require("cloudinary");
 const dotenv = require("dotenv");
 
 dotenv.config();
@@ -15,8 +16,29 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/homeease";
+const MONGO_URI = String(process.env.MONGO_URI || "").trim();
 const isVercel = Boolean(process.env.VERCEL);
+const CLOUDINARY_CLOUD_NAME = String(process.env.CLOUDINARY_CLOUD_NAME || "").trim();
+const CLOUDINARY_API_KEY = String(process.env.CLOUDINARY_API_KEY || "").trim();
+const CLOUDINARY_API_SECRET = String(process.env.CLOUDINARY_API_SECRET || "").trim();
+const cloudinaryEnabled = Boolean(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET);
+
+if (cloudinaryEnabled) {
+  cloudinary.config({
+    cloud_name: CLOUDINARY_CLOUD_NAME,
+    api_key: CLOUDINARY_API_KEY,
+    api_secret: CLOUDINARY_API_SECRET,
+    secure: true
+  });
+}
+
+const startupWarnings = [];
+if (!MONGO_URI) {
+  startupWarnings.push("MONGO_URI is missing. Limited in-memory mode is enabled.");
+}
+if (!cloudinaryEnabled) {
+  startupWarnings.push("Cloudinary is not configured. Work photos use local/temporary storage.");
+}
 
 // Booking schema
 const bookingSchema = new mongoose.Schema({
@@ -51,6 +73,7 @@ const bookingSchema = new mongoose.Schema({
       type: [
         {
           url: { type: String, required: true },
+          publicId: { type: String, default: "" },
           uploadedAt: { type: Date, default: Date.now }
         }
       ],
@@ -60,6 +83,7 @@ const bookingSchema = new mongoose.Schema({
       type: [
         {
           url: { type: String, required: true },
+          publicId: { type: String, default: "" },
           uploadedAt: { type: Date, default: Date.now }
         }
       ],
@@ -98,6 +122,11 @@ let useInMemory = true;
 let inMemoryBookings = [];
 let inMemoryChatMessages = [];
 const bookingSseClients = new Map();
+const dbStatus = {
+  mode: "in-memory",
+  connected: false,
+  reason: "Database not initialized"
+};
 
 // Vercel filesystem is read-only except /tmp, so use /tmp for runtime uploads.
 const uploadsRootDir = isVercel ? path.join("/tmp", "uploads") : path.join(__dirname, "uploads");
@@ -124,26 +153,127 @@ const uploadWorkPhotos = multer({
   }
 });
 
+function startupDiagnostics() {
+  console.log("[startup] Runtime:", isVercel ? "vercel" : "node");
+  console.log("[startup] Mongo configured:", MONGO_URI ? "yes" : "no");
+  console.log("[startup] Cloudinary configured:", cloudinaryEnabled ? "yes" : "no");
+  if (startupWarnings.length) {
+    console.warn("[startup] Warnings:", startupWarnings.join(" | "));
+  }
+}
+
+async function uploadPhotoToCloudinary(localFilePath) {
+  const result = await cloudinary.uploader.upload(localFilePath, {
+    folder: "homeease/work-photos",
+    resource_type: "image"
+  });
+  return {
+    url: result.secure_url,
+    publicId: result.public_id,
+    uploadedAt: new Date()
+  };
+}
+
+async function createPhotoEntry(file) {
+  if (!file) return null;
+
+  if (cloudinaryEnabled && file.path) {
+    try {
+      return await uploadPhotoToCloudinary(file.path);
+    } finally {
+      fs.unlink(file.path, () => {});
+    }
+  }
+
+  return {
+    url: `/uploads/work-photos/${file.filename}`,
+    publicId: "",
+    uploadedAt: new Date()
+  };
+}
+
+async function removePhotoAsset(photo) {
+  if (!photo) return;
+  const publicId = String(photo.publicId || "").trim();
+  const photoUrl = String(photo.url || "").trim();
+
+  if (publicId && cloudinaryEnabled) {
+    try {
+      await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+      return;
+    } catch (error) {
+      console.warn("Cloudinary delete failed:", error.message || error);
+    }
+  }
+
+  if (photoUrl.startsWith("/uploads/work-photos/")) {
+    const fileName = path.basename(photoUrl);
+    const filePath = path.join(workPhotosDir, fileName);
+    fs.unlink(filePath, () => {});
+  }
+}
+
 async function connectDatabase() {
   if (!MONGO_URI) {
-    console.warn("MONGO_URI not provided. Falling back to in-memory bookings (non-persistent).\nSet MONGO_URI in .env to enable MongoDB storage.");
+    dbStatus.mode = "in-memory";
+    dbStatus.connected = false;
+    dbStatus.reason = "MONGO_URI missing";
+    console.warn("MONGO_URI not provided. Falling back to in-memory mode.");
     return;
   }
   try {
     await mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
     useInMemory = false;
+    dbStatus.mode = "mongodb";
+    dbStatus.connected = true;
+    dbStatus.reason = "Connected";
     console.log("Connected to MongoDB");
   } catch (error) {
-    console.warn("MongoDB connection failed; using in-memory storage.", error);
+    console.warn("MongoDB connection failed; using in-memory storage.", error.message || error);
     useInMemory = true;
+    dbStatus.mode = "in-memory";
+    dbStatus.connected = false;
+    dbStatus.reason = "MongoDB connect failed";
   }
 }
 
+startupDiagnostics();
 connectDatabase();
 
 // Serve frontend static files
 app.use(express.static(path.join(__dirname)));
 app.use("/uploads", express.static(uploadsRootDir));
+
+app.use("/api", (req, res, next) => {
+  res.setHeader("X-HomeEase-Storage-Mode", dbStatus.mode);
+  if (!dbStatus.connected) {
+    res.setHeader("X-HomeEase-Db-Warning", dbStatus.reason || "Database unavailable");
+  }
+  next();
+});
+
+app.get("/api/health", (req, res) => {
+  const warnings = [...startupWarnings];
+  if (!dbStatus.connected) {
+    warnings.unshift(`Database warning: ${dbStatus.reason}`);
+  }
+
+  res.json({
+    ok: true,
+    runtime: isVercel ? "vercel" : "node",
+    database: {
+      mode: dbStatus.mode,
+      connected: dbStatus.connected,
+      reason: dbStatus.reason
+    },
+    uploads: {
+      provider: cloudinaryEnabled ? "cloudinary" : "local",
+      localPath: uploadsRootDir
+    },
+    warnings,
+    now: new Date().toISOString()
+  });
+});
 
 function toPlainBooking(booking) {
   if (!booking) return null;
@@ -1167,12 +1297,8 @@ app.post(
         return res.status(400).json({ message: "Upload at least one image (before or after)" });
       }
 
-      const beforeEntry = beforeFile
-        ? { url: `/uploads/work-photos/${beforeFile.filename}`, uploadedAt: new Date() }
-        : null;
-      const afterEntry = afterFile
-        ? { url: `/uploads/work-photos/${afterFile.filename}`, uploadedAt: new Date() }
-        : null;
+      const beforeEntry = await createPhotoEntry(beforeFile);
+      const afterEntry = await createPhotoEntry(afterFile);
 
       if (useInMemory) {
         const idx = inMemoryBookings.findIndex((b) => String(b.id) === String(req.params.id) || String(b._id) === String(req.params.id));
@@ -1280,8 +1406,13 @@ app.delete("/api/provider/bookings/:id/photos", authMiddleware, async (req, res)
       return res.status(404).json({ message: "Photo not found" });
     }
 
-    const beforeCount = booking.workPhotos[phase].length;
-    booking.workPhotos[phase] = booking.workPhotos[phase].filter((p) => String(p.url || "") !== photoUrl);
+      const beforeCount = booking.workPhotos[phase].length;
+      let removedPhoto = null;
+      booking.workPhotos[phase] = booking.workPhotos[phase].filter((p) => {
+        const match = String(p.url || "") === photoUrl;
+        if (match) removedPhoto = p;
+        return !match;
+      });
     if (beforeCount === booking.workPhotos[phase].length) {
       return res.status(404).json({ message: "Photo not found" });
     }
@@ -1289,12 +1420,7 @@ app.delete("/api/provider/bookings/:id/photos", authMiddleware, async (req, res)
     await booking.save();
     broadcastBookingEvent("photo-deleted", booking);
 
-    // Remove stored file when it is local upload path.
-    if (photoUrl.startsWith("/uploads/work-photos/")) {
-      const fileName = path.basename(photoUrl);
-      const filePath = path.join(workPhotosDir, fileName);
-      fs.unlink(filePath, () => {});
-    }
+    await removePhotoAsset(removedPhoto || { url: photoUrl });
 
     res.json({ message: "Photo deleted", booking });
   } catch (error) {
