@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeEase Services | Booking Records</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-content">
+      <a class="logo" href="index.html"><span>HomeEase</span> Services</a>
+      <nav class="nav-links" id="menu">
+        <a class="active" href="bookingrecord.html">Booking Records</a>
+        <a href="adminuser.html">User Management</a>
+        <a href="contactadmin.html">Contact Messages</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-outline" href="login.html">Login</a>
+        <button class="menu-toggler" id="menuToggle"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="records-hero">
+      <div>
+        <p class="records-kicker">BOOKING OPERATIONS</p>
+        <h1>All Booking Records</h1>
+        <p>Track booking activity, filter by customer mobile, and keep status and follow-up updates current from one central view.</p>
+      </div>
+      <div class="records-hero-note">
+        <h3>Action Priority</h3>
+        <ul>
+          <li><i class="fas fa-check-circle"></i> Resolve pending bookings first</li>
+          <li><i class="fas fa-check-circle"></i> Update follow-up notes after service completion</li>
+          <li><i class="fas fa-check-circle"></i> Verify customer mobile before status changes</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="booked-list section-white booking-records-shell">
+      <div class="booking-record-toolbar">
+        <div class="booking-search-wrap">
+          <input id="bookingMobileSearch" type="tel" pattern="[0-9]{10}" placeholder="Filter by mobile number (10 digits)" />
+          <button id="searchBookingByMobile" class="btn btn-primary">Filter by Mobile</button>
+          <button id="clearBookingSearch" class="btn btn-outline">Show All</button>
+        </div>
+        <div class="stats-section booking-stats-wrap">
+          <span id="bookingCount" class="booking-count-badge">Loading bookings...</span>
+        </div>
+      </div>
+      <p id="bookingSearchMessage" class="form-message booking-search-message"></p>
+      <div id="bookingsContainer" class="booking-records-grid"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div><h3>HomeEase Services</h3><p>Trusted home professionals.</p></div>
+      <div><h4>Quick links</h4><a href="index.html">Home</a><a href="services.html">Services</a><a href="booking.html">Book</a><a href="contact.html">Contact</a></div>
+      <div><h4>Contact</h4><p>support@homeease.com</p><p>+91 99999 99999</p></div>
+      <div><h4>Social</h4><div class="social-links"><a href="#"><i class="fab fa-facebook-f"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin-in"></i></a></div></div>
+    </div>
+    <div class="footer-bottom">© 2026 HomeEase Services. All rights reserved.</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

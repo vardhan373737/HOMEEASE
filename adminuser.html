@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeEase Services | Admin User Management</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-content">
+      <a class="logo" href="index.html"><span>HomeEase</span> Services</a>
+      <nav class="nav-links" id="menu">
+        <a href="bookingrecord.html">Booking Records</a>
+        <a class="active" href="adminuser.html">User Management</a>
+        <a href="contactadmin.html">Contact Messages</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-outline" href="login.html">Login</a>
+        <button class="menu-toggler" id="menuToggle"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="admin-hero">
+      <div>
+        <p class="admin-kicker">USER GOVERNANCE</p>
+        <h1>Admin User Management</h1>
+        <p>Manage users, providers, and administrators with role-based controls, status filtering, and direct profile updates from one workspace.</p>
+      </div>
+      <div class="admin-hero-note">
+        <h3>Management Focus</h3>
+        <ul>
+          <li><i class="fas fa-check-circle"></i> Approve pending users quickly</li>
+          <li><i class="fas fa-check-circle"></i> Maintain correct role assignments</li>
+          <li><i class="fas fa-check-circle"></i> Keep contact details accurate</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="admin-stats-grid" id="userStats">
+      <article class="admin-stat-card">
+          <h3 id="totalUsers">0</h3>
+          <p>Total Users</p>
+      </article>
+      <article class="admin-stat-card">
+          <h3 id="totalProviders">0</h3>
+          <p>Total Providers</p>
+      </article>
+      <article class="admin-stat-card">
+          <h3 id="totalAdmins">0</h3>
+          <p>Total Admins</p>
+      </article>
+      <article class="admin-stat-card">
+          <h3 id="pendingUsers">0</h3>
+          <p>Pending Approvals</p>
+      </article>
+    </section>
+
+    <section class="admin-bookings-card admin-panel-card">
+      <div class="admin-panel-head">
+        <h2>All Users</h2>
+      </div>
+      <div class="admin-user-search-wrap admin-user-filters-wrap">
+        <input type="text" id="userSearch" placeholder="Search by name, email, or phone" />
+        <select id="roleFilter">
+          <option value="">All Roles</option>
+          <option value="user">Users</option>
+          <option value="provider">Providers</option>
+          <option value="admin">Admins</option>
+        </select>
+        <select id="statusFilter">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+        </select>
+        <button id="searchUsersBtn" class="btn btn-primary">Search</button>
+        <button id="refreshUsersBtn" class="btn btn-outline">Refresh</button>
+      </div>
+      <div id="usersList"></div>
+    </section>
+
+    <section class="admin-bookings-card admin-panel-card">
+      <div class="admin-panel-head">
+        <h2>User Details</h2>
+      </div>
+      <div id="userDetails" class="admin-user-details" style="display: none;">
+        <h3>User Information</h3>
+        <form id="userUpdateForm" class="admin-user-form">
+          <input type="hidden" id="userId" />
+          <label for="userName">Name</label>
+          <input type="text" id="userName" required />
+
+          <label for="userEmail">Email</label>
+          <input type="email" id="userEmail" required />
+
+          <label for="userPhone">Phone</label>
+          <input type="tel" id="userPhone" pattern="[0-9]{10}" required />
+
+          <label for="userPassword">New Password (leave empty to keep current)</label>
+          <input type="password" id="userPassword" />
+
+          <label for="userRole">Role</label>
+          <select id="userRole" required>
+            <option value="user">User</option>
+            <option value="provider">Provider</option>
+            <option value="admin">Admin</option>
+          </select>
+
+          <label for="userStatus">Status</label>
+          <select id="userStatus" required>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+          </select>
+
+          <button type="submit" class="btn btn-primary">Update User</button>
+          <button type="button" id="deleteUserBtn" class="btn btn-outline admin-danger-btn">Delete User</button>
+        </form>
+        <p id="userUpdateMessage" class="form-message admin-user-message"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div><h3>HomeEase Services</h3><p>Trusted home professionals.</p></div>
+      <div><h4>Quick links</h4><a href="index.html">Home</a><a href="admin.html">Admin</a><a href="adminuser.html">Users</a><a href="contact.html">Contact</a></div>
+      <div><h4>Contact</h4><p>support@homeease.com</p><p>+91 99999 99999</p></div>
+      <div><h4>Social</h4><div class="social-links"><a href="#"><i class="fab fa-facebook-f"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin-in"></i></a></div></div>
+    </div>
+    <div class="footer-bottom">© 2026 HomeEase Services. All rights reserved.</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

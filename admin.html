@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeEase Services | Admin Panel</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-content">
+      <a class="logo"><span>HomeEase</span> Services</a>
+      <nav class="nav-links" id="menu">
+        <a href="bookingrecord.html">Booking Records</a>
+        <a href="adminuser.html">User Management</a>
+        <a href="contactadmin.html">Contact Messages</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-outline" href="login.html">Login</a>
+        <button class="menu-toggler" id="menuToggle"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+  <main class="container">
+    <section class="admin-hero">
+      <div>
+        <p class="admin-kicker">ADMIN CONTROL CENTER</p>
+        <h1>Monitor, approve, and manage HomeEase operations in one place.</h1>
+        <p>Get a complete overview of platform activity, pending approvals, and provider capacity with clear controls for fast decisions.</p>
+      </div>
+      <div class="admin-hero-note">
+        <h3>Today Focus</h3>
+        <ul>
+          <li><i class="fas fa-check-circle"></i> Resolve pending user approvals</li>
+          <li><i class="fas fa-check-circle"></i> Track booking status updates</li>
+          <li><i class="fas fa-check-circle"></i> Review provider availability</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="admin-stats-grid" id="adminStats">
+      <article class="admin-stat-card">
+        <h3 id="totalBookings">0</h3>
+        <p>Total Bookings</p>
+      </article>
+      <article class="admin-stat-card">
+        <h3 id="pendingApprovals">0</h3>
+        <p>Pending Approvals</p>
+      </article>
+      <article class="admin-stat-card">
+        <h3 id="totalProviders">0</h3>
+        <p>Total Providers</p>
+      </article>
+    </section>
+
+    <section class="admin-bookings-card admin-panel-card">
+      <div class="admin-panel-head">
+        <h2>Booking Records</h2>
+        <div class="admin-export-actions">
+          <button type="button" id="exportPaymentsCsvBtn" class="btn btn-outline">Export Payments CSV</button>
+          <button type="button" id="exportPaymentsPdfBtn" class="btn btn-primary">Export Payments PDF</button>
+        </div>
+      </div>
+      <div id="adminBookings"></div>
+    </section>
+
+    <section class="admin-two-col">
+      <section class="admin-bookings-card admin-panel-card">
+        <div class="admin-panel-head">
+          <h2>Pending User Approvals</h2>
+        </div>
+        <div id="pendingUsers"></div>
+      </section>
+
+      <section class="admin-bookings-card admin-panel-card">
+        <div class="admin-panel-head">
+          <h2>Provider Details</h2>
+        </div>
+        <div id="providerDetails"></div>
+      </section>
+    </section>
+
+    <section class="admin-bookings-card admin-panel-card">
+      <div class="admin-panel-head">
+        <h2>User Management</h2>
+      </div>
+      <div class="admin-user-search-wrap">
+        <input type="text" id="userSearch" placeholder="Search by email or phone" />
+        <button id="searchUserBtn" class="btn btn-primary">Search User</button>
+      </div>
+
+      <div id="userDetails" class="admin-user-details" style="display: none;">
+        <h3>User Details</h3>
+        <form id="userUpdateForm" class="admin-user-form">
+          <input type="hidden" id="userId" />
+
+          <label for="userName">Name</label>
+          <input type="text" id="userName" required />
+
+          <label for="userEmail">Email</label>
+          <input type="email" id="userEmail" required />
+
+          <label for="userPhone">Phone</label>
+          <input type="tel" id="userPhone" pattern="[0-9]{10}" required />
+
+          <label for="userPassword">New Password (leave empty to keep current)</label>
+          <input type="password" id="userPassword" />
+
+          <label for="userRole">Role</label>
+          <select id="userRole" required>
+            <option value="user">User</option>
+            <option value="provider">Provider</option>
+            <option value="admin">Admin</option>
+          </select>
+
+          <label for="userStatus">Status</label>
+          <select id="userStatus" required>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+          </select>
+
+          <button type="submit" class="btn btn-primary">Update User</button>
+        </form>
+        <p id="userUpdateMessage" class="form-message admin-user-message"></p>
+      </div>
+    </section>
+
+    <section id="adminChatWidgetPanel" class="admin-bookings-card admin-panel-card chat-widget-panel chat-widget-hidden">
+      <div class="admin-panel-head">
+        <h2>Provider Chat</h2>
+        <button type="button" id="adminChatWidgetClose" class="btn btn-outline chat-widget-close">Close</button>
+      </div>
+      <div class="admin-user-search-wrap admin-chat-provider-wrap">
+        <select id="adminChatProviderSelect">
+          <option value="">Select provider</option>
+        </select>
+      </div>
+      <div id="adminChatMessages" class="chat-messages-box">
+        <p>Select a provider to view chat.</p>
+      </div>
+      <form id="adminChatForm" class="chat-compose-form">
+        <input id="adminChatInput" type="text" placeholder="Type message to provider..." required />
+        <button type="submit" class="btn btn-primary">Send</button>
+        <button type="button" id="adminChatDeleteBtn" class="btn admin-danger-btn">Delete Selected Provider Chat</button>
+      </form>
+      <p id="adminChatStatus" class="form-message"></p>
+    </section>
+  </main>
+
+  <button type="button" id="adminChatWidgetToggle" class="chat-widget-fab" aria-label="Open chat">
+    <svg class="chat-widget-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <path d="M19.11 17.41c-.25-.12-1.47-.72-1.7-.8-.23-.09-.4-.12-.57.12-.17.25-.65.8-.8.96-.15.17-.3.19-.55.07-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.39-1.72-.15-.25-.02-.39.11-.51.11-.11.25-.3.37-.45.12-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.12-.57-1.37-.78-1.88-.21-.5-.43-.43-.59-.44-.15-.01-.32-.01-.49-.01-.17 0-.45.06-.68.32-.23.25-.88.86-.88 2.09 0 1.23.9 2.42 1.02 2.59.12.17 1.77 2.7 4.28 3.79 2.51 1.08 2.51.72 2.96.67.45-.04 1.47-.6 1.68-1.17.21-.57.21-1.06.15-1.17-.06-.1-.23-.16-.48-.28z"></path>
+      <path d="M16 3C8.82 3 3 8.73 3 15.8c0 2.49.72 4.81 1.97 6.78L3 29l6.64-1.89A13.1 13.1 0 0 0 16 28.6c7.18 0 13-5.73 13-12.8S23.18 3 16 3zm0 23.29c-2.07 0-4.09-.56-5.85-1.62l-.42-.25-3.94 1.12 1.15-3.83-.27-.44a10.95 10.95 0 0 1-1.69-5.78c0-6.06 5-10.99 11.02-10.99 6.08 0 11.02 4.93 11.02 10.99 0 6.06-4.94 10.8-11.02 10.8z"></path>
+    </svg>
+    <span id="adminChatBadge" class="chat-widget-badge chat-widget-badge-hidden">0</span>
+  </button>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div><h3>HomeEase Services</h3><p>Trusted home professionals.</p></div>
+      <div><h4>Quick links</h4><a href="index.html">Home</a><a href="services.html">Services</a><a href="booking.html">Book</a><a href="contact.html">Contact</a></div>
+      <div><h4>Contact</h4><p>support@homeease.com</p><p>+91 99999 99999</p></div>
+      <div><h4>Social</h4><div class="social-links"><a href="#"><i class="fab fa-facebook-f"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin-in"></i></a></div></div>
+    </div>
+    <div class="footer-bottom">© 2026 HomeEase Services. All rights reserved.</div>
+  </footer>
+  <script src="script.js"></script>
+</body>
+</html>

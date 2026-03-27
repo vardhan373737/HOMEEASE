@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeEase Services | Contact Messages</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-content">
+      <a class="logo"><span>HomeEase</span> Services</a>
+      <nav class="nav-links" id="menu">
+        <a href="bookingrecord.html">Booking Records</a>
+        <a href="adminuser.html">User Management</a>
+        <a class="active" href="contactadmin.html">Contact Messages</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-outline" href="login.html">Login</a>
+        <button class="menu-toggler" id="menuToggle"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="admin-hero">
+      <div>
+        <p class="admin-kicker">MESSAGE CENTER</p>
+        <h1>Contact Messages</h1>
+        <p>Review customer inquiries, filter by sender details, and quickly track communication volume.</p>
+      </div>
+      <div class="admin-hero-note">
+        <h3>Response Priorities</h3>
+        <ul>
+          <li><i class="fas fa-check-circle"></i> Handle urgent service escalations first</li>
+          <li><i class="fas fa-check-circle"></i> Verify sender details before callbacks</li>
+          <li><i class="fas fa-check-circle"></i> Keep responses consistent and timely</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="admin-bookings-card admin-panel-card contact-admin-panel">
+      <div class="admin-panel-head">
+        <h2>Inbox</h2>
+      </div>
+      <div class="booking-record-toolbar contact-admin-toolbar">
+        <div class="booking-search-wrap contact-admin-search-wrap">
+          <input id="contactSearch" type="text" placeholder="Search by name, email, mobile, or subject" />
+          <button id="searchContacts" class="btn btn-primary">Search</button>
+          <button id="clearContactSearch" class="btn btn-outline">Show All</button>
+        </div>
+        <div class="stats-section booking-stats-wrap">
+          <span id="contactCount" class="booking-count-badge">Loading messages...</span>
+        </div>
+      </div>
+      <div id="contactsContainer" class="contact-admin-list"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div><h3>HomeEase Services</h3><p>Trusted home professionals.</p></div>
+      <div><h4>Quick links</h4><a href="index.html">Home</a><a href="admin.html">Admin</a><a href="adminuser.html">Users</a><a href="contact.html">Contact</a></div>
+      <div><h4>Contact</h4><p>support@homeease.com</p><p>+91 99999 99999</p></div>
+      <div><h4>Social</h4><div class="social-links"><a href="#"><i class="fab fa-facebook-f"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin-in"></i></a></div></div>
+    </div>
+    <div class="footer-bottom">© 2026 HomeEase Services. All rights reserved.</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

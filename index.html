@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeEase Services | Home</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-content">
+      <a class="logo" href="index.html"><span>HomeEase</span> Services</a>
+      <nav class="nav-links" id="menu">
+        <a href="index.html">Home</a>
+        <a href="services.html">Services</a>
+        <a href="booking.html">Booking</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-outline" href="login.html">Login</a>
+        <a class="btn btn-outline" href="register.html">Register</a>
+        <button class="menu-toggler" id="menuToggle"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-content">
+        <div class="hero-text">
+          <h1>On-demand home services with trusted professionals</h1>
+          <p>Book painting, repair, cleaning, plumbing and more — all at affordable pricing.</p>
+          <div class="search-card">
+            <input id="homeSearch" type="text" placeholder="Search services like AC Repair, Plumbing..." />
+            <button id="searchBtn" class="btn">Search</button>
+          </div>
+          <div class="hero-ctas">
+            <a class="btn btn-primary" href="booking.html">Book Now</a>
+            <a class="btn btn-outline" href="services.html">View Services</a>
+          </div>
+        </div>
+        <div class="hero-media">
+          <img src="https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=900&q=80" alt="Home services" />
+        </div>
+      </div>
+    </section>
+
+    <section class="featured-services container">
+      <h2>Featured Services</h2>
+      <div class="card-grid" id="featuredCards"></div>
+    </section>
+
+    <section class="testimonials section-white">
+      <div class="container">
+        <h2>What customers say</h2>
+        <form id="reviewForm" class="review-form" autocomplete="off">
+          <div class="review-form-row">
+            <input type="text" id="reviewName" placeholder="Your name" required />
+            <select id="reviewRating" required>
+              <option value="5">5 Stars</option>
+              <option value="4">4 Stars</option>
+              <option value="3">3 Stars</option>
+              <option value="2">2 Stars</option>
+              <option value="1">1 Star</option>
+            </select>
+          </div>
+          <textarea id="reviewContent" placeholder="Share your service experience" minlength="10" maxlength="400" required></textarea>
+          <div class="review-form-actions">
+            <button type="submit" class="btn btn-primary">Submit Review</button>
+            <p id="reviewStatus" class="review-status"></p>
+          </div>
+        </form>
+        <div class="testimonials-grid" id="testimonials">
+          <article class="testimonial-card">
+            <p>"HomeEase made AC service simple and fast. Technicians arrived on time and fixed my cooling issue in 1 hour!"</p>
+            <h4>Riya K.</h4>
+            <span>⭐⭐⭐⭐⭐</span>
+          </article>
+          <article class="testimonial-card">
+            <p>"Great plumbing service and very professional team. Easy booking and they followed up after completion."</p>
+            <h4>Arjun M.</h4>
+            <span>⭐⭐⭐⭐⭐</span>
+          </article>
+          <article class="testimonial-card">
+            <p>"Loved the sofa cleaning. Home feels refreshed. Booking process was smooth and cost was fair."</p>
+            <h4>Priya S.</h4>
+            <span>⭐⭐⭐⭐⭐</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="how-it-works container">
+      <h2>How HomeEase Works</h2>
+      <div class="steps-grid">
+        <div class="step-card"><i class="fas fa-search"></i><h3>Find a service</h3><p>Explore all expert services in one platform.</p></div>
+        <div class="step-card"><i class="fas fa-calendar-check"></i><h3>Pick slot</h3><p>Choose time, date and location instantly.</p></div>
+        <div class="step-card"><i class="fas fa-tools"></i><h3>Get it done</h3><p>Reliable professionals complete the job safely.</p></div>
+      </div>
+    </section>
+
+    <section class="whatsapp-booking">
+      <div class="container whatsapp-box">
+        <h3>Need help? Book through WhatsApp</h3>
+        <p>Click the button and send your service request instantly.</p>
+        <a class="btn btn-primary" href="https://wa.me/919999999999?text=Hi%20HomeEase%20team%2C%20I%20want%20to%20book%20a%20service" target="_blank"><i class="fab fa-whatsapp"></i> WhatsApp Us</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <h3>HomeEase Services</h3>
+        <p>Your neighbourhood home solutions platform. Trusted professionals, transparent pricing.</p>
+      </div>
+      <div>
+        <h4>Quick links</h4>
+        <a href="services.html">Services</a>
+        <a href="booking.html">Book</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <p>support@homeease.com</p>
+        <p>+91 99999 99999</p>
+      </div>
+      <div>
+        <h4>Follow us</h4>
+        <div class="social-links">
+          <a href="#"><i class="fab fa-facebook-f"></i></a>
+          <a href="#"><i class="fab fa-twitter"></i></a>
+          <a href="#"><i class="fab fa-instagram"></i></a>
+          <a href="#"><i class="fab fa-linkedin-in"></i></a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2026 HomeEase Services. All rights reserved.</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

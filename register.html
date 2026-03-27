@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeEase Services | Register</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-content">
+      <a class="logo" href="index.html"><span>HomeEase</span> Services</a>
+      <nav class="nav-links" id="menu">
+        <a href="index.html">Home</a>
+        <a href="services.html">Services</a>
+        <a href="booking.html">Booking</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-outline" href="login.html">Login</a>
+        <button class="menu-toggler" id="menuToggle"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container auth-page">
+    <section class="auth-card">
+      <h2>
+        <span class="desktop-only">Create an account (Desktop)</span>
+        <span class="mobile-only">Create an account (Mobile)</span>
+      </h2>
+      <form id="registerForm">
+        <input type="text" id="registerName" placeholder="Full Name" required />
+        <input type="email" id="registerEmail" placeholder="Email" required />
+        <input type="tel" id="registerPhone" placeholder="Mobile (10 digits)" pattern="[0-9]{10}" required />
+        <input type="password" id="registerPassword" placeholder="Password" required minlength="6" />
+        <label for="registerRole" style="margin: 0.4rem 0 0.1rem; display:block; font-weight: 600; font-size:0.86rem; color:var(--muted);">Role</label>
+        <select id="registerRole" required style="width:100%; border:1px solid var(--border); border-radius:9px; padding:0.72rem; margin-bottom:0.55rem;">
+          <option value="">Select role</option>
+          <option value="user">Customer</option>
+          <option value="provider">Provider</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="btn btn-outline" type="submit">Register</button>
+        <p id="registerMessage" class="form-message"></p>
+      </form>
+      <p style="margin-top: 1rem; font-size: 0.95rem; color: var(--muted);">Already have an account? <a href="login.html">Login here</a>.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div><h3>HomeEase Services</h3><p>Trusted home professionals.</p></div>
+      <div><h4>Quick links</h4><a href="index.html">Home</a><a href="services.html">Services</a><a href="booking.html">Book</a><a href="contact.html">Contact</a></div>
+      <div><h4>Contact</h4><p>support@homeease.com</p><p>+91 99999 99999</p></div>
+      <div><h4>Social</h4><div class="social-links"><a href="#"><i class="fab fa-facebook-f"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin-in"></i></a></div></div>
+    </div>
+    <div class="footer-bottom">© 2026 HomeEase Services. All rights reserved.</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

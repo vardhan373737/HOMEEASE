@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeEase Services | Contact</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-content">
+      <a class="logo" href="index.html"><span>HomeEase</span> Services</a>
+      <nav class="nav-links" id="menu">
+        <a href="index.html">Home</a>
+        <a href="services.html">Services</a>
+        <a href="booking.html">Booking</a>
+        <a href="about.html">About</a>
+        <a class="active" href="contact.html">Contact</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-outline" href="login.html">Login</a>
+        <a class="btn btn-outline" href="register.html">Register</a>
+        <button class="menu-toggler" id="menuToggle"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="contact-hero">
+      <div>
+        <p class="contact-kicker">CONTACT HOMEEASE</p>
+        <h1>Let's solve your home-service needs quickly and professionally.</h1>
+        <p>From urgent repair coordination to booking support, our team is available to assist you with clear communication and dependable response times.</p>
+      </div>
+      <div class="contact-hero-note">
+        <h3>Priority Support Windows</h3>
+        <p>Fast-track responses for active bookings and urgent service disruptions.</p>
+        <div class="contact-pill-list">
+          <span><i class="fas fa-bolt"></i> Emergency escalation</span>
+          <span><i class="fas fa-headset"></i> Dedicated support desk</span>
+          <span><i class="fas fa-clock"></i> Same-day callbacks</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="contact-quick-grid">
+      <article class="contact-quick-card">
+        <i class="fas fa-phone-alt"></i>
+        <h3>Call Us</h3>
+        <p>+91 99999 99999</p>
+      </article>
+      <article class="contact-quick-card">
+        <i class="fas fa-envelope"></i>
+        <h3>Email</h3>
+        <p>support@homeease.com</p>
+      </article>
+      <article class="contact-quick-card">
+        <i class="fas fa-map-marker-alt"></i>
+        <h3>Office</h3>
+        <p>123 HomeEase Blvd, Mumbai</p>
+      </article>
+      <article class="contact-quick-card">
+        <i class="fas fa-business-time"></i>
+        <h3>Hours</h3>
+        <p>Mon-Sun: 9AM - 8PM</p>
+      </article>
+    </section>
+
+    <section class="contact-grid contact-premium-grid">
+      <div class="contact-card contact-info-card">
+        <h2>How we help</h2>
+        <ul class="contact-help-list">
+          <li><i class="fas fa-check-circle"></i> Booking assistance and slot changes</li>
+          <li><i class="fas fa-check-circle"></i> Service quality and provider support</li>
+          <li><i class="fas fa-check-circle"></i> Pricing and invoice clarifications</li>
+          <li><i class="fas fa-check-circle"></i> Complaint resolution and follow-up</li>
+        </ul>
+      </div>
+      <div class="contact-card contact-form-card">
+        <h2>Send us a message</h2>
+        <form id="contactForm">
+          <input type="text" id="contactName" placeholder="Your Name" required />
+          <input type="email" id="contactEmail" placeholder="Your Email" required />
+          <input type="tel" id="contactPhone" placeholder="Your Mobile Number" pattern="[0-9]{10}" required />
+          <input type="text" id="contactSubject" placeholder="Subject" required />
+          <textarea id="contactMessage" rows="5" placeholder="Tell us how we can help" required></textarea>
+          <button class="btn btn-primary" type="submit">Send Message</button>
+          <p id="contactStatus" class="form-message"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div><h3>HomeEase Services</h3><p>Trusted home professionals.</p></div>
+      <div><h4>Quick links</h4><a href="index.html">Home</a><a href="services.html">Services</a><a href="booking.html">Book</a><a href="contact.html">Contact</a></div>
+      <div><h4>Contact</h4><p>support@homeease.com</p><p>+91 99999 99999</p></div>
+      <div><h4>Social</h4><div class="social-links"><a href="#"><i class="fab fa-facebook-f"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin-in"></i></a></div></div>
+    </div>
+    <div class="footer-bottom">© 2026 HomeEase Services. All rights reserved.</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

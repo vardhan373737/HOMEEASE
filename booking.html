@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeEase Services | Booking</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-content">
+      <a class="logo" href="index.html"><span>HomeEase</span> Services</a>
+      <nav class="nav-links" id="menu">
+        <a href="index.html">Home</a>
+        <a href="services.html">Services</a>
+        <a class="active" href="booking.html">Booking</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-outline" href="login.html">Login</a>
+        <a class="btn btn-outline" href="register.html">Register</a>
+        <button class="menu-toggler" id="menuToggle"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="page-header"><h1>Book a Service</h1><p>Complete the form and we will confirm your booking soon.</p></section>
+
+    <section class="booking-form-section">
+      <div class="booking-form-card">
+        <h2>Service Booking</h2>
+        <form id="bookingForm">
+          <label>Name</label><input type="text" id="name" required />
+          <label>Phone</label><input type="tel" id="phone" required pattern="[0-9]{10}" placeholder="10 digit number" />
+          <label>Address</label><textarea id="address" rows="2" required></textarea>
+          <label>Date</label><input type="date" id="date" required />
+          <label>Service Type</label>
+          <select id="serviceType" required>
+            <option value="">Select service</option>
+          </select>
+          <label>Estimated Price (INR)</label><input type="text" id="price" readonly value="0" />
+          <label>Additional Notes</label><textarea id="notes" rows="2" placeholder="Any additional details..."></textarea>
+          <button class="btn btn-primary" type="submit">Confirm Booking</button>
+          <p id="bookingMessage" class="form-message"></p>
+        </form>
+      </div>
+      <div class="price-estimation-card">
+        <h2>Price Estimation</h2>
+        <p>Select a service to get a ballpark estimate.</p>
+        <ul id="priceList"></ul>
+      </div>
+    </section>
+
+    <section class="booked-list section-white">
+      <h2>Recent Bookings (User Preview)</h2>
+      <div class="booking-search-ray" style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+        <input id="bookingMobileSearch" type="tel" pattern="[0-9]{10}" placeholder="Search by mobile number (10 digits)" style="flex: 1; padding: 0.65rem; border: 1px solid #ccc; border-radius: 6px;" />
+        <button id="searchBookingByMobile" class="btn btn-primary" style="min-width: 160px;">Fetch by Mobile</button>
+        <button id="clearBookingSearch" class="btn btn-outline" style="min-width: 140px;">Clear</button>
+      </div>
+      <p id="bookingSearchMessage" class="form-message" style="margin-bottom: 1rem;"></p>
+      <div id="bookingsContainer"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div><h3>HomeEase Services</h3><p>Trusted home professionals.</p></div>
+      <div><h4>Quick links</h4><a href="index.html">Home</a><a href="services.html">Services</a><a href="booking.html">Book</a><a href="contact.html">Contact</a></div>
+      <div><h4>Contact</h4><p>support@homeease.com</p><p>+91 99999 99999</p></div>
+      <div><h4>Social</h4><div class="social-links"><a href="#"><i class="fab fa-facebook-f"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin-in"></i></a></div></div>
+    </div>
+    <div class="footer-bottom">© 2026 HomeEase Services. All rights reserved.</div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
