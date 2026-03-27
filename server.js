@@ -16,6 +16,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/homeease";
+const isVercel = Boolean(process.env.VERCEL);
 
 // Booking schema
 const bookingSchema = new mongoose.Schema({
@@ -98,7 +99,8 @@ let inMemoryBookings = [];
 let inMemoryChatMessages = [];
 const bookingSseClients = new Map();
 
-const uploadsRootDir = path.join(__dirname, "uploads");
+// Vercel filesystem is read-only except /tmp, so use /tmp for runtime uploads.
+const uploadsRootDir = isVercel ? path.join("/tmp", "uploads") : path.join(__dirname, "uploads");
 const workPhotosDir = path.join(uploadsRootDir, "work-photos");
 fs.mkdirSync(workPhotosDir, { recursive: true });
 
@@ -1504,6 +1506,10 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (!isVercel) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
