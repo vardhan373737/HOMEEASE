@@ -154,6 +154,8 @@ a {
   background: transparent;
   color: #24486e;
   font-weight: 650;
+  white-space: nowrap;
+  flex: 0 0 auto;
   transition: all 0.18s ease;
 }
 
@@ -226,6 +228,8 @@ a {
   background: transparent;
   color: #24486e;
   font-weight: 650;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .provider-nav-page .nav-links a:hover,
@@ -259,7 +263,7 @@ a {
   }
 
   .admin-home-page .nav-links {
-    justify-content: center;
+    justify-content: flex-start;
     flex-wrap: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
@@ -292,8 +296,15 @@ a {
   }
 
   .provider-nav-page .nav-links {
-    justify-content: center;
+    justify-content: flex-start;
     flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .provider-nav-page .nav-links::-webkit-scrollbar {
+    display: none;
   }
 
   .provider-nav-page .nav-actions {
@@ -1050,6 +1061,126 @@ a {
   justify-content: center;
   background-color: #f5f7fa;
   overflow: hidden;
+}
+
+.service-image-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.admin-service-preview-btn {
+  min-width: 110px;
+}
+
+.service-preview-open {
+  overflow: hidden;
+}
+
+.service-preview-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: none;
+}
+
+.service-preview-modal[aria-hidden="false"] {
+  display: block;
+}
+
+.service-preview-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 24, 40, 0.64);
+}
+
+.service-preview-dialog {
+  position: relative;
+  width: min(920px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  margin: 1rem auto;
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #d8e6fa;
+  box-shadow: 0 24px 48px rgba(15, 35, 66, 0.28);
+}
+
+.service-preview-close {
+  position: absolute;
+  right: 0.6rem;
+  top: 0.55rem;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(7, 23, 43, 0.7);
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.service-preview-media-wrap {
+  background: linear-gradient(180deg, #eef4ff 0%, #dbe8ff 100%);
+  padding: 1rem;
+  min-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.service-preview-media {
+  max-width: 100%;
+  max-height: 58vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 16px 30px rgba(15, 35, 66, 0.18);
+}
+
+.service-preview-content {
+  padding: 1rem 1.1rem 1.2rem;
+  border-top: 1px solid #e4ecfb;
+}
+
+.service-preview-title {
+  margin: 0;
+  font-size: 1.45rem;
+  line-height: 1.25;
+}
+
+.service-preview-desc {
+  margin: 0.52rem 0 0;
+  color: #34435e;
+}
+
+.service-preview-price {
+  margin: 0.62rem 0 0;
+  font-weight: 700;
+  color: #115293;
+}
+
+@media (max-width: 700px) {
+  .service-preview-dialog {
+    width: calc(100vw - 1rem);
+    margin: 0.5rem auto;
+    max-height: calc(100vh - 1rem);
+  }
+
+  .service-preview-media-wrap {
+    min-height: 260px;
+    padding: 0.65rem;
+  }
+
+  .service-preview-media {
+    max-height: 45vh;
+  }
+
+  .service-preview-title {
+    font-size: 1.2rem;
+  }
 }
 
 .service-image-input {

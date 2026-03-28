@@ -40,6 +40,7 @@ let testimonialsSliderTimer = null;
 let testimonialsSliderIndex = 0;
 let testimonialsSliderResizeBound = false;
 let systemWarningBanner = null;
+let servicePreviewModal = null;
 const chatNotificationState = {
   provider: {},
   admin: {}
@@ -198,6 +199,70 @@ function getPhotoUrl(url) {
     return value;
   }
   return `/${value}`;
+}
+
+function ensureServicePreviewModal() {
+  if (servicePreviewModal && document.body.contains(servicePreviewModal)) {
+    return servicePreviewModal;
+  }
+
+  servicePreviewModal = document.createElement("div");
+  servicePreviewModal.className = "service-preview-modal";
+  servicePreviewModal.setAttribute("aria-hidden", "true");
+  servicePreviewModal.innerHTML = `
+    <div class="service-preview-backdrop" data-preview-close="1"></div>
+    <div class="service-preview-dialog" role="dialog" aria-modal="true" aria-label="Service preview">
+      <button type="button" class="service-preview-close" data-preview-close="1" aria-label="Close preview">&times;</button>
+      <div class="service-preview-media-wrap">
+        <img src="" alt="Service preview" class="service-preview-media" />
+      </div>
+      <div class="service-preview-content">
+        <h3 class="service-preview-title"></h3>
+        <p class="service-preview-desc"></p>
+        <p class="service-preview-price"></p>
+      </div>
+    </div>
+  `;
+
+  servicePreviewModal.addEventListener("click", (event) => {
+    const closeTarget = event.target.closest("[data-preview-close='1']");
+    if (!closeTarget) return;
+    servicePreviewModal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("service-preview-open");
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (!servicePreviewModal || servicePreviewModal.getAttribute("aria-hidden") !== "false") return;
+    servicePreviewModal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("service-preview-open");
+  });
+
+  document.body.appendChild(servicePreviewModal);
+  return servicePreviewModal;
+}
+
+function openServicePreview(data = {}) {
+  const modal = ensureServicePreviewModal();
+  const src = getPhotoUrl(data.imageUrl);
+  if (!src) return;
+
+  const titleEl = modal.querySelector(".service-preview-title");
+  const descEl = modal.querySelector(".service-preview-desc");
+  const priceEl = modal.querySelector(".service-preview-price");
+  const imgEl = modal.querySelector(".service-preview-media");
+
+  if (!titleEl || !descEl || !priceEl || !imgEl) return;
+
+  titleEl.textContent = data.name || "Service";
+  descEl.textContent = data.desc || "No description available.";
+  const priceValue = Number(data.price || 0);
+  priceEl.textContent = Number.isFinite(priceValue) && priceValue > 0 ? `Starting at INR ${priceValue}` : "Price not set";
+  imgEl.src = src;
+  imgEl.alt = data.name ? `${data.name} preview` : "Service preview";
+
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("service-preview-open");
 }
 
 function renderWorkPhotosList(photos = [], title = "", options = {}) {
@@ -669,6 +734,8 @@ async function loadAdminProviderChatMessages() {
 }
 
 function setupAdminProviderChat() {
+  ensureAdminChatWidgetElements();
+
   const form = document.getElementById("adminChatForm");
   const select = document.getElementById("adminChatProviderSelect");
   const input = document.getElementById("adminChatInput");
@@ -831,6 +898,52 @@ function setupAdminProviderChat() {
       }
     });
   }
+}
+
+function ensureAdminChatWidgetElements() {
+  const hasPanel = !!document.getElementById("adminChatWidgetPanel");
+  const hasToggle = !!document.getElementById("adminChatWidgetToggle");
+  if (hasPanel && hasToggle) return;
+
+  const panel = document.createElement("section");
+  panel.id = "adminChatWidgetPanel";
+  panel.className = "admin-bookings-card admin-panel-card chat-widget-panel chat-widget-hidden";
+  panel.innerHTML = `
+    <div class="admin-panel-head">
+      <h2>Provider Chat</h2>
+      <button type="button" id="adminChatWidgetClose" class="btn btn-outline chat-widget-close">Close</button>
+    </div>
+    <div class="admin-user-search-wrap admin-chat-provider-wrap">
+      <select id="adminChatProviderSelect">
+        <option value="">Select provider</option>
+      </select>
+    </div>
+    <div id="adminChatMessages" class="chat-messages-box">
+      <p>Select a provider to view chat.</p>
+    </div>
+    <form id="adminChatForm" class="chat-compose-form">
+      <input id="adminChatInput" type="text" placeholder="Type message to provider..." required />
+      <button type="submit" class="btn btn-primary">Send</button>
+      <button type="button" id="adminChatDeleteBtn" class="btn admin-danger-btn">Delete Selected Provider Chat</button>
+    </form>
+    <p id="adminChatStatus" class="form-message"></p>
+  `;
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.id = "adminChatWidgetToggle";
+  toggle.className = "chat-widget-fab";
+  toggle.setAttribute("aria-label", "Open chat");
+  toggle.innerHTML = `
+    <svg class="chat-widget-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <path d="M19.11 17.41c-.25-.12-1.47-.72-1.7-.8-.23-.09-.4-.12-.57.12-.17.25-.65.8-.8.96-.15.17-.3.19-.55.07-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.39-1.72-.15-.25-.02-.39.11-.51.11-.11.25-.3.37-.45.12-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.12-.57-1.37-.78-1.88-.21-.5-.43-.43-.59-.44-.15-.01-.32-.01-.49-.01-.17 0-.45.06-.68.32-.23.25-.88.86-.88 2.09 0 1.23.9 2.42 1.02 2.59.12.17 1.77 2.7 4.28 3.79 2.51 1.08 2.51.72 2.96.67.45-.04 1.47-.6 1.68-1.17.21-.57.21-1.06.15-1.17-.06-.1-.23-.16-.48-.28z"></path>
+      <path d="M16 3C8.82 3 3 8.73 3 15.8c0 2.49.72 4.81 1.97 6.78L3 29l6.64-1.89A13.1 13.1 0 0 0 16 28.6c7.18 0 13-5.73 13-12.8S23.18 3 16 3zm0 23.29c-2.07 0-4.09-.56-5.85-1.62l-.42-.25-3.94 1.12 1.15-3.83-.27-.44a10.95 10.95 0 0 1-1.69-5.78c0-6.06 5-10.99 11.02-10.99 6.08 0 11.02 4.93 11.02 10.99 0 6.06-4.94 10.8-11.02 10.8z"></path>
+    </svg>
+    <span id="adminChatBadge" class="chat-widget-badge chat-widget-badge-hidden">0</span>
+  `;
+
+  document.body.appendChild(panel);
+  document.body.appendChild(toggle);
 }
 
 function populateFeaturedServices() {
@@ -1631,6 +1744,9 @@ async function mountAdminServiceManager() {
             <div class="service-image-preview" ${imageStyle}>
               ${!imageUrl ? `<i class="fas fa-image" style="font-size: 2rem; color: var(--muted);"></i>` : ""}
             </div>
+            <div class="service-image-actions">
+              <button type="button" class="btn btn-outline admin-service-preview-btn" data-id="${escapeHtml(serviceId)}" ${!imageUrl ? "disabled" : ""}>Preview</button>
+            </div>
             <input type="text" class="admin-service-input service-name" data-id="${escapeHtml(serviceId)}" value="${escapeHtml(item.name || "")}" placeholder="Service name" />
             <input type="number" min="1" step="1" class="admin-service-input service-price" data-id="${escapeHtml(serviceId)}" value="${Number(item.price || 0)}" placeholder="Price" />
             <input type="text" class="admin-service-input service-icon" data-id="${escapeHtml(serviceId)}" value="${escapeHtml(item.icon || "fas fa-tools")}" placeholder="Font Awesome icon class" />
@@ -1719,6 +1835,26 @@ async function mountAdminServiceManager() {
   if (!list.dataset.bound) {
     list.dataset.bound = "1";
     list.addEventListener("click", async (event) => {
+      const previewBtn = event.target.closest(".admin-service-preview-btn");
+      if (previewBtn) {
+        const serviceId = previewBtn.getAttribute("data-id");
+        const card = previewBtn.closest(".admin-service-card");
+        if (!serviceId || !card) return;
+
+        const preview = card.querySelector(".service-image-preview");
+        const imageStyle = preview ? preview.getAttribute("style") || "" : "";
+        const urlMatch = imageStyle.match(/url\('([^']+)'\)/);
+        const imageUrl = urlMatch && urlMatch[1] ? urlMatch[1] : "";
+
+        openServicePreview({
+          imageUrl,
+          name: card.querySelector(`.service-name[data-id="${serviceId}"]`)?.value?.trim() || "",
+          desc: card.querySelector(`.service-desc[data-id="${serviceId}"]`)?.value?.trim() || "",
+          price: card.querySelector(`.service-price[data-id="${serviceId}"]`)?.value || ""
+        });
+        return;
+      }
+
       const btn = event.target.closest(".admin-service-update-btn");
       if (!btn) return;
 
@@ -3550,6 +3686,16 @@ async function init() {
   const user = getCurrentUser();
   checkSystemHealth(page);
 
+  const adminChatPages = new Set([
+    "admin.html",
+    "bookingrecord.html",
+    "adminuser.html",
+    "serviceadmin.html",
+    "contactadmin.html",
+    "adminrating.html",
+    "payment.html"
+  ]);
+
   await fetchServicesCatalog();
 
   const isHomePage = page === "index.html" || page === "";
@@ -3680,6 +3826,10 @@ async function init() {
     }
     mountAdminBookings();
     setupBookingLiveUpdates(page);
+  }
+
+  if (adminChatPages.has(page) && user && user.role === "admin") {
+    setupAdminProviderChat();
   }
 
   refreshServiceDependentViews();
