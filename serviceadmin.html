@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeEase Services | Service Management</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous"></script>
+</head>
+<body class="admin-nav-page admin-home-page">
+  <header class="navbar">
+    <div class="container nav-content">
+      <a class="logo" href="admin.html"><span>HomeEase</span> Services</a>
+      <nav class="nav-links" id="menu">
+        <a href="admin.html">Admin Dashboard</a>
+        <a href="bookingrecord.html">Booking Records</a>
+        <a href="adminuser.html">User Management</a>
+        <a class="active" href="serviceadmin.html">Service Management</a>
+        <a href="contactadmin.html">Contact Messages</a>
+        <a href="adminrating.html">Ratings</a>
+        <a href="/payment.html">Payments</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="menu-toggler" id="menuToggle" type="button" aria-label="Toggle navigation menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="admin-hero">
+      <div>
+        <p class="admin-kicker">SERVICE MANAGEMENT</p>
+        <h1>Create, edit, and manage service offerings</h1>
+        <p>Add new services, adjust pricing, update descriptions, and manage all service details from this centralized hub.</p>
+      </div>
+      <div class="admin-hero-note">
+        <h3>Quick Actions</h3>
+        <ul>
+          <li><i class="fas fa-plus-circle"></i> Add new services</li>
+          <li><i class="fas fa-edit"></i> Update service pricing</li>
+          <li><i class="fas fa-info-circle"></i> Manage service details</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="admin-bookings-card admin-panel-card">
+      <div class="admin-panel-head">
+        <h2>Add New Service</h2>
+      </div>
+      <form id="adminServiceForm" class="admin-user-form">
+        <label for="newServiceName">Service Name <span style="color: var(--danger);">*</span></label>
+        <input type="text" id="newServiceName" placeholder="e.g., Kitchen Shelving" required />
+
+        <label for="newServicePrice">Price (₹) <span style="color: var(--danger);">*</span></label>
+        <input type="number" id="newServicePrice" min="1" step="1" placeholder="e.g., 1200" required />
+
+        <label for="newServiceIcon">Icon Class (Font Awesome)</label>
+        <input type="text" id="newServiceIcon" placeholder="e.g., fas fa-tools" />
+
+        <label for="newServiceDesc">Description <span style="color: var(--danger);">*</span></label>
+        <textarea id="newServiceDesc" rows="4" placeholder="Brief service description" required></textarea>
+
+        <label for="newServiceImage">Service Image</label>
+        <input type="file" id="newServiceImage" accept="image/*" />
+        <p style="font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem;">Upload a representative image for this service (Max 5MB)</p>
+
+        <button type="submit" class="btn btn-primary">Add Service</button>
+      </form>
+      <p id="adminServiceMessage" class="form-message admin-user-message"></p>
+    </section>
+
+    <section class="admin-bookings-card admin-panel-card">
+      <div class="admin-panel-head">
+        <h2>Manage Existing Services</h2>
+        <p style="margin: 0; color: var(--muted); font-size: 0.9rem;">Edit prices, descriptions, and details for active services</p>
+      </div>
+      <div id="adminServicesList" class="admin-services-list">
+        <p>Loading services...</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div><h3>HomeEase Services</h3><p>Trusted home professionals.</p></div>
+      <div><h4>Quick links</h4><a href="index.html">Home</a><a href="services.html">Services</a><a href="booking.html">Book</a><a href="contact.html">Contact</a></div>
+      <div><h4>Contact</h4><p>support@homeease.com</p><p>+91 99999 99999</p></div>
+      <div><h4>Social</h4><div class="social-links"><a href="#"><i class="fab fa-facebook-f"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin-in"></i></a></div></div>
+    </div>
+    <div class="footer-bottom">© 2026 HomeEase Services. All rights reserved.</div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const user = getCurrentUser();
+      if (!user || user.role !== "admin") {
+        window.location.href = "login.html";
+        return;
+      }
+      await fetchServicesCatalog();
+      await mountAdminServiceManager();
+    });
+  </script>
+</body>
+</html>

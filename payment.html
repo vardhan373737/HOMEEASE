@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HomeEase Services | Contact Messages</title>
+  <title>HomeEase Services | Payment Updates</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,9 +18,9 @@
         <a href="bookingrecord.html">Booking Records</a>
         <a href="adminuser.html">User Management</a>
         <a href="serviceadmin.html">Service Management</a>
-        <a class="active" href="contactadmin.html">Contact Messages</a>
+        <a href="contactadmin.html">Contact Messages</a>
         <a href="adminrating.html">Ratings</a>
-        <a href="/payment.html">Payments</a>
+        <a class="active" href="/payment.html">Payments</a>
       </nav>
       <div class="nav-actions">
         <button class="menu-toggler" id="menuToggle" type="button" aria-label="Toggle navigation menu">☰</button>
@@ -29,44 +29,38 @@
   </header>
 
   <main class="container">
-    <section class="admin-hero">
+    <section class="records-hero">
       <div>
-        <p class="admin-kicker">MESSAGE CENTER</p>
-        <h1>Contact Messages</h1>
-        <p>Review customer inquiries, filter by sender details, and quickly track communication volume.</p>
+        <p class="records-kicker">PAYMENT OPERATIONS</p>
+        <h1>Payment Update Center</h1>
+        <p>Update payment status, amount paid, and add payment transaction history for every booking from one admin workspace.</p>
       </div>
-      <div class="admin-hero-note">
-        <h3>Response Priorities</h3>
+      <div class="records-hero-note">
+        <h3>Payment Actions</h3>
         <ul>
-          <li><i class="fas fa-check-circle"></i> Handle urgent service escalations first</li>
-          <li><i class="fas fa-check-circle"></i> Verify sender details before callbacks</li>
-          <li><i class="fas fa-check-circle"></i> Keep responses consistent and timely</li>
+          <li><i class="fas fa-check-circle"></i> Mark unpaid, partial, or paid status</li>
+          <li><i class="fas fa-check-circle"></i> Update amount paid instantly</li>
+          <li><i class="fas fa-check-circle"></i> Add payment ledger entries with method and reference</li>
         </ul>
       </div>
     </section>
 
-    <section class="admin-bookings-card admin-panel-card contact-admin-panel">
+    <section class="admin-bookings-card admin-panel-card">
       <div class="admin-panel-head">
-        <h2>Inbox</h2>
-      </div>
-      <div class="booking-record-toolbar contact-admin-toolbar">
-        <div class="booking-search-wrap contact-admin-search-wrap">
-          <input id="contactSearch" type="text" placeholder="Search by name, email, mobile, or subject" />
-          <button id="searchContacts" class="btn btn-primary">Search</button>
-          <button id="clearContactSearch" class="btn btn-outline">Show All</button>
-        </div>
-        <div class="stats-section booking-stats-wrap">
-          <span id="contactCount" class="booking-count-badge">Loading messages...</span>
+        <h2>Payment Updates</h2>
+        <div class="admin-export-actions">
+          <button type="button" id="exportPaymentsCsvBtn" class="btn btn-outline">Export Payments CSV</button>
+          <button type="button" id="exportPaymentsPdfBtn" class="btn btn-primary">Export Payments PDF</button>
         </div>
       </div>
-      <div id="contactsContainer" class="contact-admin-list"></div>
+      <div id="adminBookings"></div>
     </section>
   </main>
 
   <footer class="site-footer">
     <div class="container footer-grid">
       <div><h3>HomeEase Services</h3><p>Trusted home professionals.</p></div>
-      <div><h4>Quick links</h4><a href="index.html">Home</a><a href="admin.html">Admin</a><a href="adminuser.html">Users</a><a href="contact.html">Contact</a></div>
+      <div><h4>Quick links</h4><a href="admin.html">Admin</a><a href="bookingrecord.html">Booking Records</a><a href="/payment.html">Payments</a><a href="contactadmin.html">Contact</a></div>
       <div><h4>Contact</h4><p>support@homeease.com</p><p>+91 99999 99999</p></div>
       <div><h4>Social</h4><div class="social-links"><a href="#"><i class="fab fa-facebook-f"></i></a><a href="#"><i class="fab fa-twitter"></i></a><a href="#"><i class="fab fa-instagram"></i></a><a href="#"><i class="fab fa-linkedin-in"></i></a></div></div>
     </div>

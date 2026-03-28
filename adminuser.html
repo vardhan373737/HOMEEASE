@@ -13,15 +13,17 @@
 <body class="admin-nav-page admin-home-page">
   <header class="navbar">
     <div class="container nav-content">
-      <a class="logo" href="index.html"><span>HomeEase</span> Services</a>
+      <a class="logo" href="admin.html"><span>HomeEase</span> Services</a>
       <nav class="nav-links" id="menu">
         <a href="bookingrecord.html">Booking Records</a>
         <a class="active" href="adminuser.html">User Management</a>
+        <a href="serviceadmin.html">Service Management</a>
         <a href="contactadmin.html">Contact Messages</a>
+        <a href="adminrating.html">Ratings</a>
+        <a href="/payment.html">Payments</a>
       </nav>
       <div class="nav-actions">
-        <a class="btn btn-outline" href="login.html">Login</a>
-        <button class="menu-toggler" id="menuToggle"><i class="fas fa-bars"></i></button>
+        <button class="menu-toggler" id="menuToggle" type="button" aria-label="Toggle navigation menu">☰</button>
       </div>
     </div>
   </header>
@@ -111,6 +113,13 @@
             <option value="provider">Provider</option>
             <option value="admin">Admin</option>
           </select>
+
+          <div id="userWorkGroup" style="display: none;">
+            <label for="userWork">Work Field (Provider Only)</label>
+            <input type="hidden" id="userWork" />
+            <div id="userWorkOptions" class="admin-work-options" aria-label="Provider services"></div>
+            <p class="admin-work-help">Select one or more default services.</p>
+          </div>
 
           <label for="userStatus">Status</label>
           <select id="userStatus" required>

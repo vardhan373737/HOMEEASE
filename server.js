@@ -40,6 +40,87 @@ if (!cloudinaryEnabled) {
   startupWarnings.push("Cloudinary is not configured. Work photos use local/temporary storage.");
 }
 
+const DEFAULT_SERVICES = [
+  { name: "House Painting", icon: "fas fa-brush", price: 1200, desc: "Interior and exterior painting solutions." },
+  { name: "AC Repair & Installation", icon: "fas fa-wind", price: 1500, desc: "Start-to-end air conditioning service." },
+  { name: "Water Purifier Service", icon: "fas fa-water", price: 800, desc: "RO repair and maintenance." },
+  { name: "TV Repair", icon: "fas fa-tv", price: 900, desc: "Television diagnostics and repair." },
+  { name: "CCTV Installation", icon: "fas fa-video", price: 1700, desc: "Secure camera setup and support." },
+  { name: "Electrical Services", icon: "fas fa-bolt", price: 1100, desc: "Wiring, fixing, and electrical safety checks." },
+  { name: "Plumbing Services", icon: "fas fa-faucet", price: 1000, desc: "Leaks, pipework, and sanitary repairs." },
+  { name: "Home Cleaning", icon: "fas fa-broom", price: 1300, desc: "Deep cleaning and sofa steam cleaning." },
+  { name: "Pest Control", icon: "fas fa-bug", price: 1400, desc: "Safe pest removal and prevention." },
+  { name: "Appliance Repair", icon: "fas fa-cogs", price: 1100, desc: "Fridge, washing machine and appliance fixes." },
+  { name: "Car Cleaning", icon: "fas fa-car", price: 1000, desc: "Interior and exterior car detailing." },
+  { name: "Gardening Services", icon: "fas fa-seedling", price: 900, desc: "Lawn care, plants and garden maintenance." }
+];
+
+const DEFAULT_PROVIDER_WORK_SERVICES = DEFAULT_SERVICES.map((service) => service.name);
+
+function normalizeProviderWork(value, allowedServices = DEFAULT_PROVIDER_WORK_SERVICES) {
+  const lookup = new Map(allowedServices.map((name) => [String(name || "").toLowerCase(), name]));
+  const seen = new Set();
+  const normalized = [];
+  const entries = String(value || "")
+    .split(/[\n,;|]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  for (const entry of entries) {
+    const key = entry.toLowerCase();
+    const canonical = lookup.get(key);
+    if (!canonical || seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(canonical);
+  }
+
+  return normalized.join(", ");
+}
+
+function normalizeServicePayload(payload = {}) {
+  const name = String(payload.name || "").trim();
+  const icon = String(payload.icon || "").trim() || "fas fa-tools";
+  const desc = String(payload.desc || "").trim();
+  const price = Number(payload.price);
+
+  if (!name) {
+    return { error: "Service name is required" };
+  }
+  if (!Number.isFinite(price) || price <= 0) {
+    return { error: "Service price must be greater than 0" };
+  }
+  if (!desc) {
+    return { error: "Service description is required" };
+  }
+
+  return {
+    value: {
+      name,
+      icon,
+      desc,
+      price: Math.round(price)
+    }
+  };
+}
+
+const serviceSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true },
+  icon: { type: String, default: "fas fa-tools" },
+  price: { type: Number, required: true, min: 1 },
+  desc: { type: String, required: true },
+  image: {
+    url: { type: String, default: "" },
+    publicId: { type: String, default: "" },
+    uploadedAt: { type: Date, default: null }
+  },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+serviceSchema.index({ name: 1 }, { unique: true });
+
+const Service = mongoose.model("Service", serviceSchema);
+
 // Booking schema
 const bookingSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -95,6 +176,11 @@ const bookingSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+bookingSchema.index({ createdAt: -1 });
+bookingSchema.index({ providerId: 1, status: 1, createdAt: -1 });
+bookingSchema.index({ userId: 1, createdAt: -1 });
+bookingSchema.index({ phone: 1, createdAt: -1 });
+
 const Booking = mongoose.model("Booking", bookingSchema);
 
 const userSchema = new mongoose.Schema({
@@ -103,9 +189,13 @@ const userSchema = new mongoose.Schema({
   phone: { type: String, required: true, unique: true },
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ["user", "provider", "admin"], default: "user" },
+  work: { type: String, default: "" },
   status: { type: String, enum: ["pending", "approved"], default: "approved" },
   createdAt: { type: Date, default: Date.now }
 });
+
+userSchema.index({ role: 1, status: 1, createdAt: -1 });
+userSchema.index({ status: 1, createdAt: -1 });
 
 const User = mongoose.model("User", userSchema);
 
@@ -121,12 +211,43 @@ const RefreshToken = mongoose.model("RefreshToken", refreshTokenSchema);
 let useInMemory = true;
 let inMemoryBookings = [];
 let inMemoryChatMessages = [];
+let inMemoryUsers = [];
+let inMemoryServices = DEFAULT_SERVICES.map((service, index) => ({
+  id: `service-${index + 1}`,
+  ...service,
+  createdAt: new Date(),
+  updatedAt: new Date()
+}));
 const bookingSseClients = new Map();
 const dbStatus = {
   mode: "in-memory",
   connected: false,
   reason: "Database not initialized"
 };
+
+const ADMIN_CACHE_TTL_MS = 8000;
+const adminApiCache = new Map();
+
+function getAdminCache(key) {
+  const entry = adminApiCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    adminApiCache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function setAdminCache(key, value, ttlMs = ADMIN_CACHE_TTL_MS) {
+  adminApiCache.set(key, {
+    value,
+    expiresAt: Date.now() + ttlMs
+  });
+}
+
+function clearAdminCache() {
+  adminApiCache.clear();
+}
 
 // Vercel filesystem is read-only except /tmp, so use /tmp for runtime uploads.
 const uploadsRootDir = isVercel ? path.join("/tmp", "uploads") : path.join(__dirname, "uploads");
@@ -145,6 +266,29 @@ const workPhotoStorage = multer.diskStorage({
 const uploadWorkPhotos = multer({
   storage: workPhotoStorage,
   limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype || !file.mimetype.startsWith("image/")) {
+      return cb(new Error("Only image uploads are allowed"));
+    }
+    cb(null, true);
+  }
+});
+
+const serviceImagesDir = path.join(uploadsRootDir, "service-images");
+fs.mkdirSync(serviceImagesDir, { recursive: true });
+
+const serviceImageStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, serviceImagesDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    const safeExt = [".jpg", ".jpeg", ".png", ".webp"].includes(ext) ? ext : ".jpg";
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
+  }
+});
+
+const uploadServiceImage = multer({
+  storage: serviceImageStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (!file.mimetype || !file.mimetype.startsWith("image/")) {
       return cb(new Error("Only image uploads are allowed"));
@@ -252,6 +396,13 @@ app.use("/api", (req, res, next) => {
   next();
 });
 
+app.use("/api", (req, res, next) => {
+  if (req.method !== "GET") {
+    clearAdminCache();
+  }
+  next();
+});
+
 app.get("/api/health", (req, res) => {
   const warnings = [...startupWarnings];
   if (!dbStatus.connected) {
@@ -275,6 +426,16 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+app.get("/api/services", async (req, res) => {
+  try {
+    const services = await getServicesCatalog();
+    res.json(services);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching services" });
+  }
+});
+
 function toPlainBooking(booking) {
   if (!booking) return null;
   if (typeof booking.toObject === "function") return booking.toObject();
@@ -291,6 +452,65 @@ function getBookingProviderId(booking) {
   return String(provider);
 }
 
+function parseProviderWorkServices(value) {
+  return String(value || "")
+    .split(/[\n,;|]+/)
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function getServicesCatalog() {
+  if (useInMemory) {
+    return [...inMemoryServices].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+  }
+  let services = await Service.find().sort({ name: 1 }).lean();
+  if (!services.length) {
+    await Service.insertMany(DEFAULT_SERVICES.map((service) => ({ ...service, updatedAt: new Date() })));
+    services = await Service.find().sort({ name: 1 }).lean();
+  }
+  return services;
+}
+
+async function getKnownServiceNames() {
+  const services = await getServicesCatalog();
+  return services.map((service) => String(service.name || "").trim()).filter(Boolean);
+}
+
+async function resolveServiceForBooking(serviceType) {
+  const normalizedName = String(serviceType || "").trim().toLowerCase();
+  if (!normalizedName) return null;
+
+  if (useInMemory) {
+    return inMemoryServices.find((service) => String(service.name || "").trim().toLowerCase() === normalizedName) || null;
+  }
+
+  const services = await Service.find({}).lean();
+  return services.find((service) => String(service.name || "").trim().toLowerCase() === normalizedName) || null;
+}
+
+function providerCanHandleBooking(allowedServiceSet, booking) {
+  if (!(allowedServiceSet instanceof Set) || allowedServiceSet.size === 0) return false;
+  const bookingService = String((booking && booking.serviceType) || "").trim().toLowerCase();
+  if (!bookingService) return false;
+  return allowedServiceSet.has(bookingService);
+}
+
+async function getProviderAllowedServiceSet(providerId) {
+  if (!providerId) return new Set();
+
+  if (useInMemory) {
+    const provider = inMemoryUsers.find((u) => String(u.id || u._id || "") === String(providerId));
+    return new Set(parseProviderWorkServices(provider && provider.work));
+  }
+
+  const provider = await User.findById(providerId).select("work").lean();
+  return new Set(parseProviderWorkServices(provider && provider.work));
+}
+
 function canReceiveBookingEvent(user, booking) {
   if (!user || !booking) return false;
   if (user.role === "admin") return true;
@@ -298,6 +518,11 @@ function canReceiveBookingEvent(user, booking) {
 
   const bookingProviderId = getBookingProviderId(booking);
   const userId = String(user._id || user.id || "");
+  const allowedServiceSet = new Set(parseProviderWorkServices(user.work));
+
+  // Provider booking visibility is constrained by selected work services.
+  if (!providerCanHandleBooking(allowedServiceSet, booking)) return false;
+
   const status = String(booking.status || "");
   if (bookingProviderId) return bookingProviderId === userId;
   return status === "pending";
@@ -363,6 +588,9 @@ const testimonialSchema = new mongoose.Schema({
   name: { type: String, required: true },
   content: { type: String, required: true },
   rating: { type: Number, min: 1, max: 5, default: 5 },
+  adminReply: { type: String, default: "" },
+  adminReplyAt: { type: Date, default: null },
+  updatedAt: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -387,7 +615,7 @@ const authMiddleware = async (req, res, next) => {
   const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "homeease-secret");
-    const user = await User.findById(decoded.id).select("name email role");
+    const user = await User.findById(decoded.id).select("name email role work");
     if (!user) return res.status(401).json({ message: "Invalid user" });
     req.user = user;
     next();
@@ -403,6 +631,168 @@ const adminMiddleware = (req, res, next) => {
   next();
 };
 
+app.get("/api/admin/services", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const services = await getServicesCatalog();
+    res.json(services);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching admin services" });
+  }
+});
+
+app.post("/api/admin/services", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const parsed = normalizeServicePayload(req.body || {});
+    if (parsed.error) {
+      return res.status(400).json({ message: parsed.error });
+    }
+
+    const serviceData = parsed.value;
+    const exists = (await getServicesCatalog()).some((item) => String(item.name || "").trim().toLowerCase() === serviceData.name.toLowerCase());
+    if (exists) {
+      return res.status(409).json({ message: "Service already exists" });
+    }
+
+    if (useInMemory) {
+      const next = {
+        id: `service-${Date.now()}-${Math.round(Math.random() * 1e6)}`,
+        ...serviceData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      inMemoryServices.push(next);
+      return res.status(201).json({ message: "Service added", service: next });
+    }
+
+    const created = await Service.create({ ...serviceData, updatedAt: new Date() });
+    res.status(201).json({ message: "Service added", service: created });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error adding service" });
+  }
+});
+
+app.put("/api/admin/services/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const parsed = normalizeServicePayload(req.body || {});
+    if (parsed.error) {
+      return res.status(400).json({ message: parsed.error });
+    }
+
+    const serviceData = parsed.value;
+
+    if (useInMemory) {
+      const idx = inMemoryServices.findIndex((item) => String(item.id || "") === String(req.params.id));
+      if (idx === -1) {
+        return res.status(404).json({ message: "Service not found" });
+      }
+
+      const conflict = inMemoryServices.some((item, itemIndex) => {
+        if (itemIndex === idx) return false;
+        return String(item.name || "").trim().toLowerCase() === serviceData.name.toLowerCase();
+      });
+      if (conflict) {
+        return res.status(409).json({ message: "Another service with this name already exists" });
+      }
+
+      const updated = {
+        ...inMemoryServices[idx],
+        ...serviceData,
+        updatedAt: new Date()
+      };
+      inMemoryServices[idx] = updated;
+      return res.json({ message: "Service updated", service: updated });
+    }
+
+    const existing = await Service.findById(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ message: "Service not found" });
+    }
+
+    const conflict = await Service.findOne({
+      _id: { $ne: req.params.id },
+      name: { $regex: `^${escapeRegExp(serviceData.name)}$`, $options: "i" }
+    }).lean();
+
+    if (conflict) {
+      return res.status(409).json({ message: "Another service with this name already exists" });
+    }
+
+    existing.name = serviceData.name;
+    existing.icon = serviceData.icon;
+    existing.desc = serviceData.desc;
+    existing.price = serviceData.price;
+    existing.updatedAt = new Date();
+    await existing.save();
+
+    res.json({ message: "Service updated", service: existing });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error updating service" });
+  }
+});
+
+app.post("/api/admin/services/:id/image", authMiddleware, adminMiddleware, uploadServiceImage.single("image"), async (req, res) => {
+  try {
+    const serviceId = req.params.id;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ message: "No image file provided" });
+    }
+
+    if (useInMemory) {
+      const idx = inMemoryServices.findIndex((item) => String(item.id || "") === String(serviceId));
+      if (idx === -1) {
+        fs.unlink(file.path, () => {});
+        return res.status(404).json({ message: "Service not found" });
+      }
+
+      const imageUrl = `/uploads/service-images/${file.filename}`;
+      inMemoryServices[idx].image = {
+        url: imageUrl,
+        publicId: "",
+        uploadedAt: new Date()
+      };
+      inMemoryServices[idx].updatedAt = new Date();
+
+      return res.json({
+        message: "Service image uploaded",
+        service: inMemoryServices[idx],
+        image: inMemoryServices[idx].image
+      });
+    }
+
+    const service = await Service.findById(serviceId);
+    if (!service) {
+      fs.unlink(file.path, () => {});
+      return res.status(404).json({ message: "Service not found" });
+    }
+
+    const imageUrl = `/uploads/service-images/${file.filename}`;
+    service.image = {
+      url: imageUrl,
+      publicId: "",
+      uploadedAt: new Date()
+    };
+    service.updatedAt = new Date();
+    await service.save();
+
+    res.json({
+      message: "Service image uploaded",
+      service,
+      image: service.image
+    });
+  } catch (error) {
+    console.error(error);
+    if (req.file) {
+      fs.unlink(req.file.path, () => {});
+    }
+    res.status(500).json({ message: "Error uploading service image" });
+  }
+});
+
 app.get("/api/stream/bookings", async (req, res) => {
   try {
     const token = String(req.query.token || "").trim();
@@ -411,7 +801,7 @@ app.get("/api/stream/bookings", async (req, res) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "homeease-secret");
-    const user = await User.findById(decoded.id).select("name email role");
+    const user = await User.findById(decoded.id).select("name email role work");
     if (!user || !["admin", "provider"].includes(user.role)) {
       return res.status(403).json({ message: "Forbidden" });
     }
@@ -442,10 +832,16 @@ app.get("/api/stream/bookings", async (req, res) => {
 // POST /api/bookings (requires authentication)
 app.post("/api/bookings", authMiddleware, async (req, res) => {
   try {
-    const { name, phone, address, date, serviceType, price, notes } = req.body;
-    if (!name || !phone || !address || !date || !serviceType || !price) {
+    const { name, phone, address, date, serviceType, notes } = req.body;
+    if (!name || !phone || !address || !date || !serviceType) {
       return res.status(400).json({ message: "Missing required fields." });
     }
+
+    const service = await resolveServiceForBooking(serviceType);
+    if (!service) {
+      return res.status(400).json({ message: "Invalid service type" });
+    }
+    const bookingPrice = String(Number(service.price));
 
     if (useInMemory) {
       const id = inMemoryBookings.length + 1;
@@ -455,8 +851,8 @@ app.post("/api/bookings", authMiddleware, async (req, res) => {
         phone,
         address,
         date,
-        serviceType,
-        price,
+        serviceType: service.name,
+        price: bookingPrice,
         notes,
         status: "pending",
         followupStatus: "",
@@ -474,7 +870,7 @@ app.post("/api/bookings", authMiddleware, async (req, res) => {
       return res.status(201).json({ id, message: "Booking saved in memory" });
     }
 
-    const booking = new Booking({ userId: req.user.id, name, phone, address, date, serviceType, price, notes });
+    const booking = new Booking({ userId: req.user.id, name, phone, address, date, serviceType: service.name, price: bookingPrice, notes });
     const saved = await booking.save();
     broadcastBookingEvent("created", saved);
     res.status(201).json({ id: saved._id, message: "Booking saved" });
@@ -526,6 +922,11 @@ app.post("/api/contact", async (req, res) => {
 app.get("/api/contact", authMiddleware, async (req, res) => {
   try {
     const { search } = req.query;
+    const cacheKey = `contact:${String(search || "").trim().toLowerCase()}`;
+    const cached = getAdminCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
     let query = {};
 
     if (search) {
@@ -540,7 +941,8 @@ app.get("/api/contact", authMiddleware, async (req, res) => {
       };
     }
 
-    const contacts = await Contact.find(query).sort({ createdAt: -1 });
+    const contacts = await Contact.find(query).sort({ createdAt: -1 }).lean();
+    setAdminCache(cacheKey, contacts);
     res.json(contacts);
   } catch (error) {
     res.status(500).json({ message: "Error fetching contacts" });
@@ -553,7 +955,12 @@ app.post("/api/testimonials", authMiddleware, async (req, res) => {
     if (!name || !content) {
       return res.status(400).json({ message: "Name and content are required" });
     }
-    const testimonial = await Testimonial.create({ name, content, rating: rating || 5 });
+    const testimonial = await Testimonial.create({
+      name,
+      content,
+      rating: rating || 5,
+      updatedAt: new Date()
+    });
     res.status(201).json(testimonial);
   } catch (error) {
     console.error(error);
@@ -563,10 +970,96 @@ app.post("/api/testimonials", authMiddleware, async (req, res) => {
 
 app.get("/api/testimonials", async (req, res) => {
   try {
-    const testimonials = await Testimonial.find().sort({ createdAt: -1 }).limit(10);
+    const testimonials = await Testimonial.find().sort({ createdAt: -1 }).limit(10).lean();
     res.json(testimonials);
   } catch (error) {
     res.status(500).json({ message: "Error fetching testimonials" });
+  }
+});
+
+app.get("/api/admin/testimonials", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const search = String(req.query.search || "").trim();
+    const cacheKey = `admin:testimonials:${search.toLowerCase()}`;
+    const cached = getAdminCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+    const query = search
+      ? {
+          $or: [
+            { name: { $regex: search, $options: "i" } },
+            { content: { $regex: search, $options: "i" } },
+            { adminReply: { $regex: search, $options: "i" } }
+          ]
+        }
+      : {};
+
+    const testimonials = await Testimonial.find(query).sort({ createdAt: -1 }).lean();
+    setAdminCache(cacheKey, testimonials);
+    res.json(testimonials);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching testimonials" });
+  }
+});
+
+app.put("/api/admin/testimonials/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, content, rating, adminReply } = req.body || {};
+
+    const testimonial = await Testimonial.findById(id);
+    if (!testimonial) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    if (typeof name === "string") {
+      const nextName = name.trim();
+      if (!nextName) return res.status(400).json({ message: "Name cannot be empty" });
+      testimonial.name = nextName;
+    }
+
+    if (typeof content === "string") {
+      const nextContent = content.trim();
+      if (!nextContent) return res.status(400).json({ message: "Review content cannot be empty" });
+      testimonial.content = nextContent;
+    }
+
+    if (rating !== undefined) {
+      const nextRating = Number(rating);
+      if (!Number.isInteger(nextRating) || nextRating < 1 || nextRating > 5) {
+        return res.status(400).json({ message: "Rating must be an integer between 1 and 5" });
+      }
+      testimonial.rating = nextRating;
+    }
+
+    if (typeof adminReply === "string") {
+      const nextReply = adminReply.trim();
+      testimonial.adminReply = nextReply;
+      testimonial.adminReplyAt = nextReply ? new Date() : null;
+    }
+
+    testimonial.updatedAt = new Date();
+    await testimonial.save();
+    res.json(testimonial);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error updating review" });
+  }
+});
+
+app.delete("/api/admin/testimonials/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Testimonial.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+    res.json({ message: "Review deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error deleting review" });
   }
 });
 
@@ -703,7 +1196,7 @@ app.get("/api/profile", authMiddleware, async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-  const user = await User.findById(req.user.id).select("name email phone");
+  const user = await User.findById(req.user.id).select("name email phone role work");
   if (!user) {
     return res.status(404).json({ message: "User not found" });
   }
@@ -716,7 +1209,17 @@ app.get("/api/admin/bookings", authMiddleware, adminMiddleware, async (req, res)
     if (useInMemory) {
       return res.json(inMemoryBookings);
     }
-    const bookings = await Booking.find().populate("providerId", "name email").sort({ createdAt: -1 });
+    const cacheKey = "admin:bookings";
+    const cached = getAdminCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const bookings = await Booking.find()
+      .populate("providerId", "name email")
+      .sort({ createdAt: -1 })
+      .lean();
+    setAdminCache(cacheKey, bookings);
     res.json(bookings);
   } catch (error) {
     res.status(500).json({ message: "Error fetching admin bookings" });
@@ -725,7 +1228,14 @@ app.get("/api/admin/bookings", authMiddleware, adminMiddleware, async (req, res)
 
 app.get("/api/admin/pending-users", authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const pendingUsers = await User.find({ status: "pending" }).select("name email role createdAt");
+    const cacheKey = "admin:pending-users";
+    const cached = getAdminCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const pendingUsers = await User.find({ status: "pending" }).select("name email role createdAt").lean();
+    setAdminCache(cacheKey, pendingUsers);
     res.json(pendingUsers);
   } catch (error) {
     res.status(500).json({ message: "Error fetching pending users" });
@@ -752,7 +1262,14 @@ app.post("/api/admin/approve-user/:id", authMiddleware, adminMiddleware, async (
 
 app.get("/api/admin/providers", authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const providers = await User.find({ role: "provider", status: "approved" }).select("name email createdAt");
+    const cacheKey = "admin:providers";
+    const cached = getAdminCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const providers = await User.find({ role: "provider", status: "approved" }).select("name email createdAt").lean();
+    setAdminCache(cacheKey, providers);
     res.json(providers);
   } catch (error) {
     res.status(500).json({ message: "Error fetching providers" });
@@ -990,7 +1507,7 @@ app.get("/api/admin/users/search", authMiddleware, adminMiddleware, async (req, 
         { phone: new RegExp(q, 'i') },
         { name: new RegExp(q, 'i') }
       ]
-    }).select("name email phone role status createdAt").limit(10);
+    }).select("name email phone role work status createdAt").limit(10).lean();
 
     res.json(users);
   } catch (error) {
@@ -1000,7 +1517,7 @@ app.get("/api/admin/users/search", authMiddleware, adminMiddleware, async (req, 
 
 app.get("/api/admin/users/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select("name email phone role status createdAt");
+    const user = await User.findById(req.params.id).select("name email phone role work status createdAt").lean();
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -1012,7 +1529,7 @@ app.get("/api/admin/users/:id", authMiddleware, adminMiddleware, async (req, res
 
 app.put("/api/admin/users/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { name, email, phone, password, role, status } = req.body;
+    const { name, email, phone, password, role, status, work } = req.body;
 
     if (!name || !email || !phone || !role || !status) {
       return res.status(400).json({ message: "Name, email, phone, role, and status are required" });
@@ -1043,7 +1560,16 @@ app.put("/api/admin/users/:id", authMiddleware, adminMiddleware, async (req, res
       return res.status(409).json({ message: "Email or phone already taken by another user" });
     }
 
-    const updateData = { name, email, phone, role, status };
+    const knownServiceNames = await getKnownServiceNames();
+
+    const updateData = {
+      name,
+      email,
+      phone,
+      role,
+      status,
+      work: role === "provider" ? normalizeProviderWork(work, knownServiceNames) : ""
+    };
 
     // Only update password if provided
     if (password && password.trim()) {
@@ -1057,7 +1583,15 @@ app.put("/api/admin/users/:id", authMiddleware, adminMiddleware, async (req, res
 
     res.json({
       message: "User updated successfully",
-      user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role, status: user.status }
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        work: user.work || "",
+        status: user.status
+      }
     });
   } catch (error) {
     console.error(error);
@@ -1087,6 +1621,11 @@ app.delete("/api/admin/users/:id", authMiddleware, adminMiddleware, async (req, 
 app.get("/api/admin/all-users", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { role, status, search } = req.query;
+    const cacheKey = `admin:all-users:${String(role || "")}:${String(status || "")}:${String(search || "").toLowerCase()}`;
+    const cached = getAdminCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
     let filter = {};
 
     if (role) filter.role = role;
@@ -1099,7 +1638,8 @@ app.get("/api/admin/all-users", authMiddleware, adminMiddleware, async (req, res
       ];
     }
 
-    const users = await User.find(filter).select("name email phone role status createdAt").sort({ createdAt: -1 });
+    const users = await User.find(filter).select("name email phone role work status createdAt").sort({ createdAt: -1 }).lean();
+    setAdminCache(cacheKey, users);
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: "Error fetching users" });
@@ -1109,17 +1649,26 @@ app.get("/api/admin/all-users", authMiddleware, adminMiddleware, async (req, res
 // Get user statistics
 app.get("/api/admin/user-stats", authMiddleware, adminMiddleware, async (req, res) => {
   try {
+    const cacheKey = "admin:user-stats";
+    const cached = getAdminCache(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const totalUsers = await User.countDocuments({ role: "user" });
     const totalProviders = await User.countDocuments({ role: "provider" });
     const totalAdmins = await User.countDocuments({ role: "admin" });
     const pendingUsers = await User.countDocuments({ status: "pending" });
 
-    res.json({
+    const payload = {
       totalUsers,
       totalProviders,
       totalAdmins,
       pendingUsers
-    });
+    };
+
+    setAdminCache(cacheKey, payload);
+    res.json(payload);
   } catch (error) {
     res.status(500).json({ message: "Error fetching user statistics" });
   }
@@ -1133,29 +1682,26 @@ app.get("/api/provider/bookings", authMiddleware, async (req, res) => {
     }
 
     const providerId = String(req.user._id || req.user.id);
+    const allowedServiceSet = await getProviderAllowedServiceSet(providerId);
+
+    if (!allowedServiceSet.size) {
+      return res.json([]);
+    }
+
     const { status } = req.query;
 
-    const assignedToProvider = { providerId };
-    const openUnassigned = { status: "pending", providerId: null };
+    const serviceRegexes = Array.from(allowedServiceSet).map((name) => new RegExp(`^${escapeRegExp(name)}$`, "i"));
+    const serviceFilter = { $in: serviceRegexes };
 
-    let filter = { $or: [assignedToProvider, openUnassigned] };
-
+    const filter = { providerId, serviceType: serviceFilter };
     if (status) {
-      if (status === "pending") {
-        filter = {
-          $or: [
-            { status: "pending", providerId: null },
-            { status: "pending", providerId }
-          ]
-        };
-      } else {
-        filter = { providerId, status };
-      }
+      filter.status = status;
     }
 
     const bookings = await Booking.find(filter).sort({ createdAt: -1 });
     res.json(bookings);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Error fetching provider bookings" });
   }
 });
@@ -1167,6 +1713,11 @@ app.put("/api/provider/bookings/:id/accept", authMiddleware, async (req, res) =>
     }
 
     const providerId = String(req.user._id || req.user.id);
+    const allowedServiceSet = await getProviderAllowedServiceSet(providerId);
+
+    if (!allowedServiceSet.size) {
+      return res.status(400).json({ message: "No work services assigned to provider" });
+    }
 
     if (useInMemory) {
       const idx = inMemoryBookings.findIndex((b) => String(b.id) === String(req.params.id) || String(b._id) === String(req.params.id));
@@ -1180,6 +1731,10 @@ app.put("/api/provider/bookings/:id/accept", authMiddleware, async (req, res) =>
 
       if (inMemoryBookings[idx].providerId && String(inMemoryBookings[idx].providerId) !== providerId) {
         return res.status(400).json({ message: "Booking already accepted by another provider" });
+      }
+
+      if (!providerCanHandleBooking(allowedServiceSet, inMemoryBookings[idx])) {
+        return res.status(403).json({ message: "This booking does not match your work services" });
       }
 
       inMemoryBookings[idx].status = "confirmed";
@@ -1200,6 +1755,10 @@ app.put("/api/provider/bookings/:id/accept", authMiddleware, async (req, res) =>
 
     if (booking.providerId && String(booking.providerId) !== providerId) {
       return res.status(400).json({ message: "Booking already accepted by another provider" });
+    }
+
+    if (!providerCanHandleBooking(allowedServiceSet, booking)) {
+      return res.status(403).json({ message: "This booking does not match your work services" });
     }
 
     booking.status = "confirmed";
@@ -1592,10 +2151,23 @@ app.get("/api/provider/stats", authMiddleware, async (req, res) => {
     }
 
     const providerId = String(req.user._id || req.user.id);
+    const allowedServiceSet = await getProviderAllowedServiceSet(providerId);
+
+    if (!allowedServiceSet.size) {
+      return res.json({
+        totalBookings: 0,
+        completedBookings: 0,
+        pendingBookings: 0,
+        totalEarnings: 0
+      });
+    }
 
     if (useInMemory) {
-      const mine = inMemoryBookings.filter((b) => String(b.providerId || "") === providerId);
-      const totalBookings = mine.length;
+      const mine = inMemoryBookings.filter((b) => {
+        if (String(b.providerId || "") !== providerId) return false;
+        return providerCanHandleBooking(allowedServiceSet, b);
+      });
+      const totalBookings = mine.filter((b) => (b.status || "pending") !== "cancelled").length;
       const completedBookings = mine.filter((b) => b.status === "completed").length;
       const pendingBookings = mine.filter((b) => ["pending", "confirmed"].includes(b.status || "pending")).length;
       const totalEarnings = mine
@@ -1610,11 +2182,15 @@ app.get("/api/provider/stats", authMiddleware, async (req, res) => {
       });
     }
 
-    const totalBookings = await Booking.countDocuments({ providerId });
-    const completedBookings = await Booking.countDocuments({ providerId, status: "completed" });
-    const pendingBookings = await Booking.countDocuments({ providerId, status: { $in: ["pending", "confirmed"] } });
+    const serviceRegexes = Array.from(allowedServiceSet).map((name) => new RegExp(`^${escapeRegExp(name)}$`, "i"));
+    const serviceFilter = { $in: serviceRegexes };
+    const baseFilter = { providerId, serviceType: serviceFilter };
 
-    const completedBookingDocs = await Booking.find({ providerId, status: "completed" }).select("price");
+    const totalBookings = await Booking.countDocuments({ ...baseFilter, status: { $ne: "cancelled" } });
+    const completedBookings = await Booking.countDocuments({ ...baseFilter, status: "completed" });
+    const pendingBookings = await Booking.countDocuments({ ...baseFilter, status: { $in: ["pending", "confirmed"] } });
+
+    const completedBookingDocs = await Booking.find({ ...baseFilter, status: "completed" }).select("price");
     const totalEarnings = completedBookingDocs.reduce((sum, booking) => sum + parseFloat(booking.price || 0), 0);
 
     res.json({

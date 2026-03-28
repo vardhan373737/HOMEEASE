@@ -24,7 +24,7 @@
       <div class="nav-actions">
         <a class="btn btn-outline" href="login.html">Login</a>
         <a class="btn btn-outline" href="register.html">Register</a>
-        <button class="menu-toggler" id="menuToggle"><i class="fas fa-bars"></i></button>
+        <button class="menu-toggler" id="menuToggle" type="button" aria-label="Toggle navigation menu">☰</button>
       </div>
     </div>
   </header>
@@ -44,6 +44,7 @@
           <select id="serviceType" required>
             <option value="">Select service</option>
           </select>
+          <div id="serviceImagePreview" class="service-image-preview-booking" style="display: none;"></div>
           <label>Estimated Price (INR)</label><input type="text" id="price" readonly value="0" />
           <label>Additional Notes</label><textarea id="notes" rows="2" placeholder="Any additional details..."></textarea>
           <button class="btn btn-primary" type="submit">Confirm Booking</button>

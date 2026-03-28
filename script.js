@@ -1,4 +1,4 @@
-const services = [
+const DEFAULT_SERVICES = [
   { name: "House Painting", icon: "fas fa-brush", price: 1200, desc: "Interior and exterior painting solutions." },
   { name: "AC Repair & Installation", icon: "fas fa-wind", price: 1500, desc: "Start-to-end air conditioning service." },
   { name: "Water Purifier Service", icon: "fas fa-water", price: 800, desc: "RO repair and maintenance." },
@@ -12,6 +12,12 @@ const services = [
   { name: "Car Cleaning", icon: "fas fa-car", price: 1000, desc: "Interior and exterior car detailing." },
   { name: "Gardening Services", icon: "fas fa-seedling", price: 900, desc: "Lawn care, plants and garden maintenance." }
 ];
+
+let services = DEFAULT_SERVICES.map((service) => ({ ...service }));
+
+function getProviderWorkServiceNames() {
+  return services.map((service) => service.name);
+}
 
 const testimonialsList = [
   { text: "Impressed with speed and professionalism. The home cleaning team did a fantastic job.", name: "Ananya R." },
@@ -28,11 +34,88 @@ let bookingRefreshTimer = null;
 let bookingSseDisconnectCount = 0;
 let bookingFallbackPollTimer = null;
 let adminBookingSnapshot = [];
+let adminTestimonialsCache = [];
+let adminRatingSearchTimer = null;
+let testimonialsSliderTimer = null;
+let testimonialsSliderIndex = 0;
+let testimonialsSliderResizeBound = false;
 let systemWarningBanner = null;
 const chatNotificationState = {
   provider: {},
   admin: {}
 };
+
+function normalizeProviderWorkSelection(rawValue) {
+  const lookup = new Map(getProviderWorkServiceNames().map((name) => [name.toLowerCase(), name]));
+  const seen = new Set();
+  const normalized = [];
+
+  const items = String(rawValue || "")
+    .split(/[\n,;|]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  for (const item of items) {
+    const key = item.toLowerCase();
+    const canonical = lookup.get(key);
+    if (!canonical || seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(canonical);
+  }
+
+  return normalized;
+}
+
+function setProviderWorkSelection(rawValue) {
+  const workEl = document.getElementById("userWork");
+  const chips = document.querySelectorAll("#userWorkOptions .admin-work-chip");
+  if (!workEl || !chips.length) return;
+
+  const selected = normalizeProviderWorkSelection(rawValue);
+  const selectedSet = new Set(selected.map((item) => item.toLowerCase()));
+
+  chips.forEach((chip) => {
+    const name = String(chip.dataset.service || "").toLowerCase();
+    const isSelected = selectedSet.has(name);
+    chip.classList.toggle("is-selected", isSelected);
+    chip.setAttribute("aria-pressed", isSelected ? "true" : "false");
+  });
+
+  workEl.value = selected.join(", ");
+}
+
+function renderProviderWorkOptions() {
+  const optionsEl = document.getElementById("userWorkOptions");
+  const workEl = document.getElementById("userWork");
+  if (!optionsEl || !workEl) return;
+
+  optionsEl.innerHTML = "";
+  getProviderWorkServiceNames().forEach((serviceName) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "admin-work-chip";
+    chip.dataset.service = serviceName;
+    chip.setAttribute("aria-pressed", "false");
+    chip.textContent = serviceName;
+    optionsEl.appendChild(chip);
+  });
+
+  if (!optionsEl.dataset.bound) {
+    optionsEl.addEventListener("click", (event) => {
+      const chip = event.target.closest(".admin-work-chip");
+      if (!chip || !optionsEl.contains(chip)) return;
+
+      chip.classList.toggle("is-selected");
+      chip.setAttribute("aria-pressed", chip.classList.contains("is-selected") ? "true" : "false");
+
+      const selected = Array.from(optionsEl.querySelectorAll(".admin-work-chip.is-selected")).map((item) => item.dataset.service);
+      workEl.value = selected.join(", ");
+    });
+    optionsEl.dataset.bound = "true";
+  }
+
+  setProviderWorkSelection(workEl.value);
+}
 
 function showSystemWarning(message) {
   const text = String(message || "").trim();
@@ -750,6 +833,33 @@ function populateFeaturedServices() {
   });
 }
 
+function refreshServiceDependentViews() {
+  populateFeaturedServices();
+  populateServicesPage();
+  populateBookingForm();
+  setupEstimate();
+  renderProviderWorkOptions();
+}
+
+async function fetchServicesCatalog() {
+  try {
+    const response = await fetch("/api/services", { cache: "no-store" });
+    if (!response.ok) return;
+
+    const catalog = await response.json();
+    if (!Array.isArray(catalog) || !catalog.length) return;
+
+    services = catalog.map((service) => ({
+      name: String(service.name || "").trim(),
+      icon: String(service.icon || "fas fa-tools").trim() || "fas fa-tools",
+      price: Number(service.price || 0),
+      desc: String(service.desc || "").trim()
+    })).filter((service) => service.name && Number.isFinite(service.price) && service.price > 0);
+  } catch (error) {
+    // Use bundled defaults if API is unavailable.
+  }
+}
+
 function populateServicesPage() {
   const container = document.getElementById("serviceCards");
   if (!container) return;
@@ -759,7 +869,12 @@ function populateServicesPage() {
   services.filter((s) => !query || s.name.toLowerCase().includes(query)).forEach((service) => {
     const card = document.createElement("article");
     card.className = "service-card";
-    card.innerHTML = `<i class="${service.icon}"></i><h3>${service.name}</h3><p>${service.desc}</p><strong>₹${service.price}</strong>`;
+    const imageUrl = service.image?.url || "";
+    const imageStyle = imageUrl ? `style="background-image: url('${escapeHtml(imageUrl)}'); background-size: cover; background-position: center;"` : "";
+    const imageContent = imageUrl 
+      ? `<div class="service-card-image" ${imageStyle}></div>`
+      : `<i class="${service.icon}"></i>`;
+    card.innerHTML = `${imageContent}<h3>${service.name}</h3><p>${service.desc}</p><strong>₹${service.price}</strong>`;
     container.appendChild(card);
   });
 }
@@ -778,6 +893,15 @@ function populateBookingForm() {
     const priceInput = document.getElementById("price");
     const selected = services.find((s) => s.name === select.value);
     priceInput.value = selected ? selected.price : "0";
+    
+    // Display service image if available
+    const serviceImagePreview = document.getElementById("serviceImagePreview");
+    if (serviceImagePreview && selected && selected.image?.url) {
+      serviceImagePreview.style.backgroundImage = `url('${selected.image.url}')`;
+      serviceImagePreview.style.display = "block";
+    } else if (serviceImagePreview) {
+      serviceImagePreview.style.display = "none";
+    }
   });
 }
 
@@ -1335,28 +1459,28 @@ async function mountAdminStats() {
   if (!token) return;
 
   try {
-    // Fetch bookings count
-    const bookingsResponse = await fetch("/api/admin/bookings", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const [bookingsResponse, pendingResponse, providersResponse] = await Promise.all([
+      fetch("/api/admin/bookings", {
+        headers: { Authorization: `Bearer ${token}` }
+      }),
+      fetch("/api/admin/pending-users", {
+        headers: { Authorization: `Bearer ${token}` }
+      }),
+      fetch("/api/admin/providers", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    ]);
+
     if (bookingsResponse.ok) {
       const bookings = await bookingsResponse.json();
       totalBookingsEl.textContent = bookings.length;
     }
 
-    // Fetch pending users count
-    const pendingResponse = await fetch("/api/admin/pending-users", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
     if (pendingResponse.ok) {
       const pending = await pendingResponse.json();
       pendingApprovalsEl.textContent = pending.length;
     }
 
-    // Fetch providers count
-    const providersResponse = await fetch("/api/admin/providers", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
     if (providersResponse.ok) {
       const providers = await providersResponse.json();
       totalProvidersEl.textContent = providers.length;
@@ -1446,6 +1570,209 @@ async function mountProviderDetails() {
     console.error("Provider details error", err);
     container.innerHTML = "<p>Error loading provider details.</p>";
   }
+}
+
+async function mountAdminServiceManager() {
+  const form = document.getElementById("adminServiceForm");
+  const list = document.getElementById("adminServicesList");
+  const message = document.getElementById("adminServiceMessage");
+  if (!form || !list || !message) return;
+
+  const token = localStorage.getItem("homeease_access_token");
+  if (!token) {
+    list.innerHTML = "<p>Please log in as admin.</p>";
+    return;
+  }
+
+  const setMessage = (text, ok = true) => {
+    message.textContent = text;
+    message.style.color = ok ? "var(--success)" : "var(--danger)";
+  };
+
+  const loadServices = async () => {
+    try {
+      const response = await fetch("/api/admin/services", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        list.innerHTML = "<p>Failed to load services.</p>";
+        return;
+      }
+
+      const items = await response.json();
+      if (!Array.isArray(items) || !items.length) {
+        list.innerHTML = "<p>No services available.</p>";
+        return;
+      }
+
+      list.innerHTML = items.map((item) => {
+        const serviceId = String(item._id || item.id || "");
+        const imageUrl = item.image?.url || "";
+        const imageStyle = imageUrl ? `style="background-image: url('${escapeHtml(imageUrl)}'); background-size: cover; background-position: center;"` : "";
+        return `
+          <article class="admin-service-card">
+            <div class="service-image-preview" ${imageStyle}>
+              ${!imageUrl ? `<i class="fas fa-image" style="font-size: 2rem; color: var(--muted);"></i>` : ""}
+            </div>
+            <input type="text" class="admin-service-input service-name" data-id="${escapeHtml(serviceId)}" value="${escapeHtml(item.name || "")}" placeholder="Service name" />
+            <input type="number" min="1" step="1" class="admin-service-input service-price" data-id="${escapeHtml(serviceId)}" value="${Number(item.price || 0)}" placeholder="Price" />
+            <input type="text" class="admin-service-input service-icon" data-id="${escapeHtml(serviceId)}" value="${escapeHtml(item.icon || "fas fa-tools")}" placeholder="Font Awesome icon class" />
+            <textarea class="admin-service-input service-desc" data-id="${escapeHtml(serviceId)}" placeholder="Description">${escapeHtml(item.desc || "")}</textarea>
+            <input type="file" accept="image/*" class="service-image-input" data-id="${escapeHtml(serviceId)}" />
+            <button class="btn btn-outline admin-service-update-btn" data-id="${escapeHtml(serviceId)}">Update</button>
+          </article>
+        `;
+      }).join("");
+    } catch (error) {
+      list.innerHTML = "<p>Error loading services.</p>";
+    }
+  };
+
+  if (!form.dataset.bound) {
+    form.dataset.bound = "1";
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const payload = {
+        name: document.getElementById("newServiceName").value.trim(),
+        price: Number(document.getElementById("newServicePrice").value || 0),
+        icon: document.getElementById("newServiceIcon").value.trim() || "fas fa-tools",
+        desc: document.getElementById("newServiceDesc").value.trim()
+      };
+
+      if (!payload.name || !payload.desc || payload.price <= 0) {
+        setMessage("Enter valid service name, description, and price.", false);
+        return;
+      }
+
+      setMessage("Adding service...", true);
+
+      try {
+        const response = await fetch("/api/admin/services", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to add service");
+        }
+
+        const newService = data.service;
+        const imageFile = document.getElementById("newServiceImage").files[0];
+
+        if (imageFile) {
+          const formData = new FormData();
+          formData.append("image", imageFile);
+
+          try {
+            const imageResponse = await fetch(`/api/admin/services/${encodeURIComponent(newService._id || newService.id)}/image`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`
+              },
+              body: formData
+            });
+
+            if (!imageResponse.ok) {
+              const imageError = await imageResponse.json();
+              throw new Error(imageError.message || "Failed to upload image");
+            }
+          } catch (imageError) {
+            console.error("Image upload error:", imageError);
+            setMessage("Service added but image upload failed: " + imageError.message, false);
+          }
+        }
+
+        form.reset();
+        await fetchServicesCatalog();
+        refreshServiceDependentViews();
+        await loadServices();
+        setMessage("Service added successfully.", true);
+      } catch (error) {
+        setMessage(error.message || "Failed to add service", false);
+      }
+    });
+  }
+
+  if (!list.dataset.bound) {
+    list.dataset.bound = "1";
+    list.addEventListener("click", async (event) => {
+      const btn = event.target.closest(".admin-service-update-btn");
+      if (!btn) return;
+
+      const serviceId = btn.getAttribute("data-id");
+      const card = btn.closest(".admin-service-card");
+      if (!serviceId || !card) return;
+
+      const payload = {
+        name: card.querySelector(`.service-name[data-id="${serviceId}"]`).value.trim(),
+        price: Number(card.querySelector(`.service-price[data-id="${serviceId}"]`).value || 0),
+        icon: card.querySelector(`.service-icon[data-id="${serviceId}"]`).value.trim() || "fas fa-tools",
+        desc: card.querySelector(`.service-desc[data-id="${serviceId}"]`).value.trim()
+      };
+
+      if (!payload.name || !payload.desc || payload.price <= 0) {
+        setMessage("Enter valid service name, description, and price.", false);
+        return;
+      }
+
+      setMessage("Updating service...", true);
+
+      try {
+        const response = await fetch(`/api/admin/services/${encodeURIComponent(serviceId)}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to update service");
+        }
+
+        const imageInput = card.querySelector(`.service-image-input[data-id="${serviceId}"]`);
+        if (imageInput && imageInput.files.length > 0) {
+          const formData = new FormData();
+          formData.append("image", imageInput.files[0]);
+
+          try {
+            const imageResponse = await fetch(`/api/admin/services/${encodeURIComponent(serviceId)}/image`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`
+              },
+              body: formData
+            });
+
+            if (!imageResponse.ok) {
+              const imageError = await imageResponse.json();
+              throw new Error(imageError.message || "Failed to upload image");
+            }
+          } catch (imageError) {
+            console.error("Image upload error:", imageError);
+            setMessage("Service updated but image upload failed: " + imageError.message, false);
+          }
+        }
+
+        await fetchServicesCatalog();
+        refreshServiceDependentViews();
+        await loadServices();
+        setMessage("Service updated successfully.", true);
+      } catch (error) {
+        setMessage(error.message || "Failed to update service", false);
+      }
+    });
+  }
+
+  await loadServices();
 }
 
 // User management functions
@@ -1576,13 +1903,24 @@ function setupUserManagement() {
 }
 
 function loadUserForEditing(user) {
+  const roleEl = document.getElementById("userRole");
+  const workGroupEl = document.getElementById("userWorkGroup");
+  const workEl = document.getElementById("userWork");
+
   document.getElementById("userId").value = user._id;
   document.getElementById("userName").value = user.name;
   document.getElementById("userEmail").value = user.email;
   document.getElementById("userPhone").value = user.phone;
-  document.getElementById("userRole").value = user.role;
+  roleEl.value = user.role;
   document.getElementById("userStatus").value = user.status;
   document.getElementById("userPassword").value = ""; // Clear password field
+
+  renderProviderWorkOptions();
+  setProviderWorkSelection(user.work || "");
+  if (workGroupEl) {
+    workGroupEl.style.display = roleEl.value === "provider" ? "block" : "none";
+  }
+
   document.getElementById("userDetails").style.display = "block";
   document.getElementById("userUpdateMessage").textContent = "";
 }
@@ -1693,6 +2031,7 @@ async function loadAllUsers(search = "", role = "", status = "") {
           <p><b>Email:</b> ${u.email}</p>
           <p><b>Phone:</b> ${getWhatsAppPhoneLink(u.phone)}</p>
           <p><b>Role:</b> ${u.role}</p>
+          ${u.role === "provider" && u.work ? `<p><b>Work:</b> ${escapeHtml(u.work)}</p>` : ""}
           <p><b>Status:</b> <span class="status-${u.status}">${u.status}</span></p>
           <p><b>Joined:</b> ${new Date(u.createdAt).toLocaleDateString()}</p>
           <button class="btn btn-primary edit-user-btn" data-id="${u._id}" style="margin-right: 0.5rem;">Edit</button>
@@ -1768,6 +2107,7 @@ async function loadProviderProfile() {
       const providerNameEl = document.getElementById("providerName");
       const providerEmailEl = document.getElementById("providerEmail");
       const providerPhoneEl = document.getElementById("providerPhone");
+      const providerWorkEl = document.getElementById("providerWork");
       const providerStatusEl = document.getElementById("providerStatus");
 
       // Backward-compatible: support both old ID-based markup and new container-only layout.
@@ -1775,12 +2115,14 @@ async function loadProviderProfile() {
         providerNameEl.textContent = user.name || "-";
         providerEmailEl.textContent = user.email || "-";
         providerPhoneEl.textContent = user.phone || "-";
+        if (providerWorkEl) providerWorkEl.textContent = user.work || "-";
         if (providerStatusEl) providerStatusEl.textContent = "Status: Active";
       } else {
         container.innerHTML = `
           <p><strong>Name:</strong> ${user.name || "-"}</p>
           <p><strong>Email:</strong> ${user.email || "-"}</p>
           <p><strong>Phone:</strong> ${getWhatsAppPhoneLink(user.phone || "-")}</p>
+          <p><strong>Work:</strong> ${escapeHtml(user.work || "-")}</p>
           <p><strong>Status:</strong> Active</p>
         `;
       }
@@ -2158,6 +2500,10 @@ async function mountTestimonials() {
   const container = document.getElementById("testimonials");
   if (!container) return;
 
+  const finalize = () => {
+    setupTestimonialsMobileSlider();
+  };
+
   try {
     const res = await fetch("/api/testimonials");
     if (res.ok) {
@@ -2165,9 +2511,13 @@ async function mountTestimonials() {
       if (data.length) {
         container.innerHTML = data.map((t) => `
           <article class="testimonial-card">
-            <p>${t.content}</p><h4>${t.name}</h4><span>${"⭐".repeat(t.rating)}</span>
+            <p>${escapeHtml(t.content)}</p>
+            <h4>${escapeHtml(t.name)}</h4>
+            <span>${"⭐".repeat(Number(t.rating) || 5)}</span>
+            ${t.adminReply ? `<p><b>Admin reply:</b> ${escapeHtml(t.adminReply)}</p>` : ""}
           </article>
         `).join("");
+        finalize();
         return;
       }
     }
@@ -2181,6 +2531,333 @@ async function mountTestimonials() {
       <p>${t.text}</p><h4>${t.name}</h4><span>⭐⭐⭐⭐⭐</span>
     </article>
   `).join("");
+
+  finalize();
+}
+
+function setupTestimonialsMobileSlider() {
+  const container = document.getElementById("testimonials");
+  if (!container) return;
+
+  // Clean up prior temporary clones before rebuilding slider state.
+  container.querySelectorAll('.testimonial-card[data-slider-clone="1"]').forEach((node) => node.remove());
+
+  let cards = Array.from(container.querySelectorAll(".testimonial-card"));
+  const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+  if (testimonialsSliderTimer) {
+    clearInterval(testimonialsSliderTimer);
+    testimonialsSliderTimer = null;
+  }
+
+  if (!isMobile) {
+    container.classList.remove("mobile-slider-mode");
+    container.style.minHeight = "";
+    cards.forEach((card) => card.classList.remove("is-active"));
+    return;
+  }
+
+  // If there is only one testimonial from API, create temporary clones so slide animation is still visible.
+  if (cards.length === 1) {
+    for (let i = 0; i < 2; i++) {
+      const clone = cards[0].cloneNode(true);
+      clone.setAttribute("data-slider-clone", "1");
+      container.appendChild(clone);
+    }
+    cards = Array.from(container.querySelectorAll(".testimonial-card"));
+  }
+
+  if (cards.length <= 1) {
+    container.classList.remove("mobile-slider-mode");
+    container.style.minHeight = "";
+    cards.forEach((card) => card.classList.remove("is-active"));
+    return;
+  }
+
+  const maxHeight = cards.reduce((max, card) => Math.max(max, card.offsetHeight || 0), 0);
+  if (maxHeight > 0) {
+    container.style.minHeight = `${maxHeight}px`;
+  }
+
+  container.classList.add("mobile-slider-mode");
+  testimonialsSliderIndex = Math.min(testimonialsSliderIndex, cards.length - 1);
+
+  const applyActive = () => {
+    cards.forEach((card, idx) => {
+      card.classList.toggle("is-active", idx === testimonialsSliderIndex);
+    });
+  };
+
+  applyActive();
+
+  testimonialsSliderTimer = setInterval(() => {
+    testimonialsSliderIndex = (testimonialsSliderIndex + 1) % cards.length;
+    applyActive();
+  }, 3200);
+
+  if (!testimonialsSliderResizeBound) {
+    testimonialsSliderResizeBound = true;
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        setupTestimonialsMobileSlider();
+      }, 180);
+    });
+  }
+}
+
+function getAdminRatingCardPayload(card) {
+  const nameInput = card.querySelector(".admin-review-name");
+  const ratingInput = card.querySelector(".admin-review-rating");
+  const contentInput = card.querySelector(".admin-review-content");
+  const replyInput = card.querySelector(".admin-review-reply");
+
+  return {
+    name: nameInput ? nameInput.value.trim() : "",
+    rating: ratingInput ? Number(ratingInput.value) : 5,
+    content: contentInput ? contentInput.value.trim() : "",
+    adminReply: replyInput ? replyInput.value.trim() : ""
+  };
+}
+
+function renderAdminTestimonials(testimonials = []) {
+  const container = document.getElementById("adminRatingsContainer");
+  const countElement = document.getElementById("adminRatingCount");
+  if (!container) return;
+
+  if (countElement) {
+    countElement.textContent = `${testimonials.length} review${testimonials.length !== 1 ? "s" : ""} found`;
+  }
+
+  if (!testimonials.length) {
+    container.innerHTML = "<p>No reviews found.</p>";
+    return;
+  }
+
+  const ratingOptions = [5, 4, 3, 2, 1]
+    .map((n) => `<option value="${n}">${n} Star${n > 1 ? "s" : ""}</option>`)
+    .join("");
+
+  container.innerHTML = testimonials.map((t) => {
+    const reviewId = String(t._id || "");
+    const createdAt = t.createdAt ? new Date(t.createdAt).toLocaleString() : "-";
+    const replyAt = t.adminReplyAt ? new Date(t.adminReplyAt).toLocaleString() : "";
+    const safeRating = Number(t.rating) >= 1 && Number(t.rating) <= 5 ? Number(t.rating) : 5;
+
+    return `
+      <article class="booking-record-card admin-review-card" data-id="${escapeHtml(reviewId)}">
+        <p><b>Submitted:</b> ${escapeHtml(createdAt)}</p>
+        <label><b>Customer Name</b></label>
+        <input type="text" class="admin-review-name" value="${escapeHtml(t.name || "")}" />
+
+        <label><b>Rating</b></label>
+        <select class="admin-review-rating">
+          ${ratingOptions}
+        </select>
+
+        <label><b>Review</b></label>
+        <textarea class="admin-review-content" rows="4">${escapeHtml(t.content || "")}</textarea>
+
+        <label><b>Admin Reply</b></label>
+        <textarea class="admin-review-reply" rows="3" placeholder="Write a reply to customer...">${escapeHtml(t.adminReply || "")}</textarea>
+        ${replyAt ? `<p class="review-status">Last replied: ${escapeHtml(replyAt)}</p>` : ""}
+
+        <div class="admin-export-actions">
+          <button type="button" class="btn btn-primary admin-review-edit-btn">Save Edit</button>
+          <button type="button" class="btn btn-outline admin-review-reply-btn">Save Reply</button>
+          <button type="button" class="btn btn-outline admin-review-delete-btn">Delete</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  container.querySelectorAll(".admin-review-rating").forEach((select, idx) => {
+    const t = testimonials[idx];
+    const safeRating = Number(t.rating) >= 1 && Number(t.rating) <= 5 ? String(t.rating) : "5";
+    select.value = safeRating;
+  });
+}
+
+function filterAdminTestimonialsLocal(search = "") {
+  const query = String(search || "").trim().toLowerCase();
+  if (!query) return [...adminTestimonialsCache];
+
+  return adminTestimonialsCache.filter((t) => {
+    const name = String(t.name || "").toLowerCase();
+    const content = String(t.content || "").toLowerCase();
+    const reply = String(t.adminReply || "").toLowerCase();
+    return name.includes(query) || content.includes(query) || reply.includes(query);
+  });
+}
+
+async function loadAdminTestimonials(search = "", forceRefresh = false) {
+  const container = document.getElementById("adminRatingsContainer");
+  const countElement = document.getElementById("adminRatingCount");
+  const status = document.getElementById("adminRatingStatus");
+  if (!container) return;
+
+  const token = localStorage.getItem("homeease_access_token");
+  if (!token) {
+    container.innerHTML = "<p>Please log in as admin to view reviews.</p>";
+    if (countElement) countElement.textContent = "Not logged in";
+    return;
+  }
+
+  if (status) {
+    status.textContent = "";
+  }
+
+  try {
+    if (!adminTestimonialsCache.length || forceRefresh) {
+      const response = await fetch("/api/admin/testimonials", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("homeease_access_token");
+          localStorage.removeItem("homeease_refresh_token");
+          localStorage.removeItem("homeease_user");
+          window.location.href = "login.html";
+          return;
+        }
+        throw new Error(data.message || "Failed to load reviews");
+      }
+
+      adminTestimonialsCache = Array.isArray(data) ? data : [];
+    }
+
+    const filtered = filterAdminTestimonialsLocal(search);
+    renderAdminTestimonials(filtered);
+  } catch (error) {
+    container.innerHTML = `<p>${escapeHtml(error.message || "Error loading reviews")}</p>`;
+    if (countElement) countElement.textContent = "Failed to load";
+  }
+}
+
+function setupAdminRatingActions() {
+  const container = document.getElementById("adminRatingsContainer");
+  const searchBtn = document.getElementById("searchAdminRatings");
+  const clearBtn = document.getElementById("clearAdminRatingSearch");
+  const searchInput = document.getElementById("adminRatingSearch");
+  const status = document.getElementById("adminRatingStatus");
+  if (!container) return;
+
+  const setStatus = (message, isError = false) => {
+    if (!status) return;
+    status.textContent = message;
+    status.style.color = isError ? "var(--danger)" : "var(--primary-dark)";
+  };
+
+  const getToken = () => localStorage.getItem("homeease_access_token");
+
+  container.addEventListener("click", async (event) => {
+    const card = event.target.closest(".admin-review-card");
+    if (!card) return;
+    const reviewId = card.getAttribute("data-id");
+    if (!reviewId) return;
+
+    const token = getToken();
+    if (!token) return;
+
+    if (event.target.closest(".admin-review-delete-btn")) {
+      const shouldDelete = window.confirm("Delete this review permanently?");
+      if (!shouldDelete) return;
+
+      try {
+        const response = await fetch(`/api/admin/testimonials/${encodeURIComponent(reviewId)}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Failed to delete review");
+        setStatus("Review deleted successfully.");
+        await loadAdminTestimonials(searchInput ? searchInput.value.trim() : "", true);
+      } catch (error) {
+        setStatus(error.message || "Failed to delete review", true);
+      }
+      return;
+    }
+
+    if (event.target.closest(".admin-review-edit-btn")) {
+      const payload = getAdminRatingCardPayload(card);
+      if (!payload.name || !payload.content) {
+        setStatus("Name and review content are required.", true);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/testimonials/${encodeURIComponent(reviewId)}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: payload.name,
+            content: payload.content,
+            rating: payload.rating
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Failed to update review");
+        setStatus("Review updated successfully.");
+        await loadAdminTestimonials(searchInput ? searchInput.value.trim() : "", true);
+      } catch (error) {
+        setStatus(error.message || "Failed to update review", true);
+      }
+      return;
+    }
+
+    if (event.target.closest(".admin-review-reply-btn")) {
+      const payload = getAdminRatingCardPayload(card);
+      try {
+        const response = await fetch(`/api/admin/testimonials/${encodeURIComponent(reviewId)}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ adminReply: payload.adminReply })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Failed to save reply");
+        setStatus(payload.adminReply ? "Reply saved successfully." : "Reply cleared successfully.");
+        await loadAdminTestimonials(searchInput ? searchInput.value.trim() : "", true);
+      } catch (error) {
+        setStatus(error.message || "Failed to save reply", true);
+      }
+    }
+  });
+
+  if (searchBtn && searchInput) {
+    searchBtn.addEventListener("click", async () => {
+      await loadAdminTestimonials(searchInput.value.trim());
+    });
+
+    searchInput.addEventListener("keypress", async (event) => {
+      if (event.key !== "Enter") return;
+      await loadAdminTestimonials(searchInput.value.trim());
+    });
+
+    searchInput.addEventListener("input", () => {
+      if (adminRatingSearchTimer) {
+        clearTimeout(adminRatingSearchTimer);
+      }
+      adminRatingSearchTimer = setTimeout(() => {
+        loadAdminTestimonials(searchInput.value.trim());
+      }, 160);
+    });
+  }
+
+  if (clearBtn && searchInput) {
+    clearBtn.addEventListener("click", async () => {
+      searchInput.value = "";
+      await loadAdminTestimonials("");
+    });
+  }
 }
 
 function setupUserFilters() {
@@ -2225,6 +2902,8 @@ async function updateUser(event) {
   const email = document.getElementById("userEmail").value.trim();
   const phone = document.getElementById("userPhone").value.trim();
   const role = document.getElementById("userRole").value;
+  const workEl = document.getElementById("userWork");
+  const selectedWork = workEl ? normalizeProviderWorkSelection(workEl.value).join(", ") : "";
   const status = document.getElementById("userStatus").value;
   const password = document.getElementById("userPassword").value;
 
@@ -2242,7 +2921,7 @@ async function updateUser(event) {
   }
 
   try {
-    const updateData = { name, email, phone, role, status };
+    const updateData = { name, email, phone, role, status, work: role === "provider" ? selectedWork : "" };
     if (password) updateData.password = password;
 
     const response = await fetch(`/api/admin/users/${userId}`, {
@@ -2589,9 +3268,12 @@ function logout() {
 function setupAuthUI() {
   const container = document.querySelector(".nav-actions");
   if (!container) return;
+  const page = (window.location.pathname.split("/").pop() || "").toLowerCase();
+  const isAdminPage = page === "admin.html" || page === "bookingrecord.html" || page === "adminuser.html" || page === "serviceadmin.html" || page === "contactadmin.html" || page === "adminrating.html" || page === "payment.html";
 
   // Remove existing login button if user is authenticated
   const user = getCurrentUser();
+  container.classList.toggle("nav-authenticated", Boolean(user));
   if (user) {
     const userLbl = document.createElement("span");
     userLbl.textContent = `${user.name} (${user.role})`;
@@ -2604,13 +3286,15 @@ function setupAuthUI() {
 
     let adminLink = null;
     if (user.role === "admin") {
-      adminLink = document.createElement("a");
-      adminLink.href = "admin.html";
-      adminLink.textContent = "Admin";
-      adminLink.className = "btn btn-outline";
-      const page = window.location.pathname.split("/").pop() || "";
-      if (page.toLowerCase() === "admin.html") {
-        adminLink.classList.add("active");
+      // On admin pages, the top nav already provides admin navigation links.
+      if (!isAdminPage) {
+        adminLink = document.createElement("a");
+        adminLink.href = "admin.html";
+        adminLink.textContent = "Admin";
+        adminLink.className = "btn btn-outline";
+        if (page === "admin.html") {
+          adminLink.classList.add("active");
+        }
       }
     }
 
@@ -2767,6 +3451,12 @@ function getBookingRefreshTask(page) {
     };
   }
 
+  if (page === "payment.html") {
+    return async () => {
+      await mountAdminBookings();
+    };
+  }
+
   if (page === "provider.html") {
     return async () => {
       const filterSelect = document.getElementById("bookingStatusFilter");
@@ -2838,10 +3528,12 @@ function setupBookingLiveUpdates(page) {
   };
 }
 
-function init() {
+async function init() {
   const page = window.location.pathname.split("/").pop();
   const user = getCurrentUser();
   checkSystemHealth();
+
+  await fetchServicesCatalog();
 
   const isHomePage = page === "index.html" || page === "";
   if (isHomePage && user && user.role === "provider") {
@@ -2859,6 +3551,7 @@ function init() {
       window.location.href = "login.html";
       return;
     }
+    mountAdminBookings();
     mountAdminStats();
     mountPendingUsers();
     mountProviderDetails();
@@ -2892,6 +3585,30 @@ function init() {
     if (userForm) {
       userForm.addEventListener("submit", updateUser);
     }
+
+    const roleEl = document.getElementById("userRole");
+    const workGroupEl = document.getElementById("userWorkGroup");
+    renderProviderWorkOptions();
+    if (roleEl && workGroupEl) {
+      const syncWorkVisibility = () => {
+        const isProvider = roleEl.value === "provider";
+        workGroupEl.style.display = isProvider ? "block" : "none";
+        if (!isProvider) {
+          setProviderWorkSelection("");
+        }
+      };
+      roleEl.addEventListener("change", syncWorkVisibility);
+      syncWorkVisibility();
+    }
+  }
+
+  // Initialize service management page
+  if (page === "serviceadmin.html") {
+    if (!user || user.role !== "admin") {
+      window.location.href = "login.html";
+      return;
+    }
+    await mountAdminServiceManager();
   }
 
   // Initialize provider dashboard
@@ -2928,11 +3645,28 @@ function init() {
     setupContactSearch();
   }
 
-  populateFeaturedServices();
-  populateServicesPage();
-  populateBookingForm();
+  // Initialize rating admin page
+  if (page === "adminrating.html") {
+    if (!user || user.role !== "admin") {
+      window.location.href = "login.html";
+      return;
+    }
+    loadAdminTestimonials();
+    setupAdminRatingActions();
+  }
+
+  // Initialize payment update admin page
+  if (page === "payment.html") {
+    if (!user || user.role !== "admin") {
+      window.location.href = "login.html";
+      return;
+    }
+    mountAdminBookings();
+    setupBookingLiveUpdates(page);
+  }
+
+  refreshServiceDependentViews();
   mountRecentBookings();
-  mountAdminBookings();
   mountTestimonials();
   setupBookingSubmit();
   setupContactForm();
@@ -2940,9 +3674,10 @@ function init() {
   setupAuth();
   setupAuthUI();
   setupMenuToggle();
-  setupEstimate();
   setupSearchButtons();
-  setupBookingSearch();
+  if (page !== "bookingrecord.html") {
+    setupBookingSearch();
+  }
 }
 
 if (document.readyState !== "loading") {

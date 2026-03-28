@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HomeEase Services | Contact Messages</title>
+  <title>HomeEase Services | Rating Management</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous"></script>
 </head>
-<body class="admin-nav-page admin-home-page">
+<body class="admin-nav-page admin-home-page admin-rating-page">
   <header class="navbar">
     <div class="container nav-content">
       <a class="logo" href="admin.html"><span>HomeEase</span> Services</a>
@@ -18,8 +18,8 @@
         <a href="bookingrecord.html">Booking Records</a>
         <a href="adminuser.html">User Management</a>
         <a href="serviceadmin.html">Service Management</a>
-        <a class="active" href="contactadmin.html">Contact Messages</a>
-        <a href="adminrating.html">Ratings</a>
+        <a href="contactadmin.html">Contact Messages</a>
+        <a class="active" href="adminrating.html">Ratings</a>
         <a href="/payment.html">Payments</a>
       </nav>
       <div class="nav-actions">
@@ -28,38 +28,36 @@
     </div>
   </header>
 
-  <main class="container">
-    <section class="admin-hero">
+  <main class="container admin-rating-main">
+    <section class="records-hero admin-rating-hero">
       <div>
-        <p class="admin-kicker">MESSAGE CENTER</p>
-        <h1>Contact Messages</h1>
-        <p>Review customer inquiries, filter by sender details, and quickly track communication volume.</p>
+        <p class="records-kicker">REVIEW MANAGEMENT</p>
+        <h1>Customer Ratings & Reviews</h1>
+        <p>Review every customer testimonial and take action with reply, edit, and delete controls from one premium moderation workspace.</p>
       </div>
-      <div class="admin-hero-note">
-        <h3>Response Priorities</h3>
+      <div class="records-hero-note">
+        <h3>Quick Actions</h3>
         <ul>
-          <li><i class="fas fa-check-circle"></i> Handle urgent service escalations first</li>
-          <li><i class="fas fa-check-circle"></i> Verify sender details before callbacks</li>
-          <li><i class="fas fa-check-circle"></i> Keep responses consistent and timely</li>
+          <li><i class="fas fa-check-circle"></i> Reply to customer feedback</li>
+          <li><i class="fas fa-check-circle"></i> Edit name, rating, and review text</li>
+          <li><i class="fas fa-check-circle"></i> Remove inappropriate reviews</li>
         </ul>
       </div>
     </section>
 
-    <section class="admin-bookings-card admin-panel-card contact-admin-panel">
-      <div class="admin-panel-head">
-        <h2>Inbox</h2>
-      </div>
-      <div class="booking-record-toolbar contact-admin-toolbar">
-        <div class="booking-search-wrap contact-admin-search-wrap">
-          <input id="contactSearch" type="text" placeholder="Search by name, email, mobile, or subject" />
-          <button id="searchContacts" class="btn btn-primary">Search</button>
-          <button id="clearContactSearch" class="btn btn-outline">Show All</button>
+    <section class="booked-list section-white booking-records-shell admin-rating-shell">
+      <div class="booking-record-toolbar">
+        <div class="booking-search-wrap">
+          <input id="adminRatingSearch" type="text" placeholder="Search by customer name, review, or reply" />
+          <button id="searchAdminRatings" class="btn btn-primary">Search</button>
+          <button id="clearAdminRatingSearch" class="btn btn-outline">Show All</button>
         </div>
         <div class="stats-section booking-stats-wrap">
-          <span id="contactCount" class="booking-count-badge">Loading messages...</span>
+          <span id="adminRatingCount" class="booking-count-badge">Loading reviews...</span>
         </div>
       </div>
-      <div id="contactsContainer" class="contact-admin-list"></div>
+      <p id="adminRatingStatus" class="form-message booking-search-message"></p>
+      <div id="adminRatingsContainer" class="booking-records-grid"></div>
     </section>
   </main>
 
