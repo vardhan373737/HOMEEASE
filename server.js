@@ -37,7 +37,7 @@ if (!MONGO_URI) {
   startupWarnings.push("MONGO_URI is missing. Limited in-memory mode is enabled.");
 }
 if (!cloudinaryEnabled) {
-  startupWarnings.push("Cloudinary is not configured. Work photos use local/temporary storage.");
+  startupWarnings.push("Cloudinary is not configured. Uploaded images use local/temporary storage and may not persist on Vercel.");
 }
 
 const DEFAULT_SERVICES = [
@@ -336,6 +336,32 @@ async function createPhotoEntry(file) {
   };
 }
 
+async function createServiceImageEntry(file) {
+  if (!file) return null;
+
+  if (cloudinaryEnabled && file.path) {
+    try {
+      const result = await cloudinary.uploader.upload(file.path, {
+        folder: "homeease/service-images",
+        resource_type: "image"
+      });
+      return {
+        url: result.secure_url,
+        publicId: result.public_id,
+        uploadedAt: new Date()
+      };
+    } finally {
+      fs.unlink(file.path, () => {});
+    }
+  }
+
+  return {
+    url: `/uploads/service-images/${file.filename}`,
+    publicId: "",
+    uploadedAt: new Date()
+  };
+}
+
 async function removePhotoAsset(photo) {
   if (!photo) return;
   const publicId = String(photo.publicId || "").trim();
@@ -353,6 +379,27 @@ async function removePhotoAsset(photo) {
   if (photoUrl.startsWith("/uploads/work-photos/")) {
     const fileName = path.basename(photoUrl);
     const filePath = path.join(workPhotosDir, fileName);
+    fs.unlink(filePath, () => {});
+  }
+}
+
+async function removeServiceImageAsset(image) {
+  if (!image) return;
+  const publicId = String(image.publicId || "").trim();
+  const imageUrl = String(image.url || "").trim();
+
+  if (publicId && cloudinaryEnabled) {
+    try {
+      await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+      return;
+    } catch (error) {
+      console.warn("Cloudinary delete failed:", error.message || error);
+    }
+  }
+
+  if (imageUrl.startsWith("/uploads/service-images/")) {
+    const fileName = path.basename(imageUrl);
+    const filePath = path.join(serviceImagesDir, fileName);
     fs.unlink(filePath, () => {});
   }
 }
@@ -749,12 +796,11 @@ app.post("/api/admin/services/:id/image", authMiddleware, adminMiddleware, uploa
         return res.status(404).json({ message: "Service not found" });
       }
 
-      const imageUrl = `/uploads/service-images/${file.filename}`;
-      inMemoryServices[idx].image = {
-        url: imageUrl,
-        publicId: "",
-        uploadedAt: new Date()
-      };
+      const imageEntry = await createServiceImageEntry(file);
+      if (inMemoryServices[idx].image?.url) {
+        await removeServiceImageAsset(inMemoryServices[idx].image);
+      }
+      inMemoryServices[idx].image = imageEntry;
       inMemoryServices[idx].updatedAt = new Date();
 
       return res.json({
@@ -770,12 +816,11 @@ app.post("/api/admin/services/:id/image", authMiddleware, adminMiddleware, uploa
       return res.status(404).json({ message: "Service not found" });
     }
 
-    const imageUrl = `/uploads/service-images/${file.filename}`;
-    service.image = {
-      url: imageUrl,
-      publicId: "",
-      uploadedAt: new Date()
-    };
+    const imageEntry = await createServiceImageEntry(file);
+    if (service.image?.url) {
+      await removeServiceImageAsset(service.image);
+    }
+    service.image = imageEntry;
     service.updatedAt = new Date();
     await service.save();
 

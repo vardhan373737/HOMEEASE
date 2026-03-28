@@ -143,16 +143,28 @@ function showSystemWarning(message) {
   }
 }
 
-async function checkSystemHealth() {
+function isAdminPageName(pageName) {
+  const page = String(pageName || "").toLowerCase();
+  return page === "admin.html"
+    || page === "bookingrecord.html"
+    || page === "adminuser.html"
+    || page === "serviceadmin.html"
+    || page === "contactadmin.html"
+    || page === "adminrating.html"
+    || page === "payment.html";
+}
+
+async function checkSystemHealth(pageName) {
+  if (!isAdminPageName(pageName)) return;
+
   try {
     const response = await fetch("/api/health", { cache: "no-store" });
     if (!response.ok) return;
 
     const health = await response.json();
-    const warnings = Array.isArray(health.warnings) ? health.warnings.filter(Boolean) : [];
-    if (!warnings.length) return;
+    if (String(health?.database?.mode || "").toLowerCase() !== "in-memory") return;
 
-    showSystemWarning(`System notice: ${warnings[0]}`);
+    showSystemWarning("System notice: Backend is running in in-memory mode. Admin data and uploads may not persist after restart. Configure MONGO_URI in deployment settings.");
   } catch (error) {
     // Ignore health-check failure to avoid blocking page behavior.
   }
@@ -853,7 +865,12 @@ async function fetchServicesCatalog() {
       name: String(service.name || "").trim(),
       icon: String(service.icon || "fas fa-tools").trim() || "fas fa-tools",
       price: Number(service.price || 0),
-      desc: String(service.desc || "").trim()
+      desc: String(service.desc || "").trim(),
+      image: {
+        url: String(service?.image?.url || "").trim(),
+        publicId: String(service?.image?.publicId || "").trim(),
+        uploadedAt: service?.image?.uploadedAt || null
+      }
     })).filter((service) => service.name && Number.isFinite(service.price) && service.price > 0);
   } catch (error) {
     // Use bundled defaults if API is unavailable.
@@ -3531,7 +3548,7 @@ function setupBookingLiveUpdates(page) {
 async function init() {
   const page = window.location.pathname.split("/").pop();
   const user = getCurrentUser();
-  checkSystemHealth();
+  checkSystemHealth(page);
 
   await fetchServicesCatalog();
 
