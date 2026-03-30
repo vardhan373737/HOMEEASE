@@ -3495,6 +3495,34 @@ function setupSearchButtons() {
   }
 }
 
+function setupRichHomepageEffects() {
+  const page = (window.location.pathname.split("/").pop() || "").toLowerCase();
+  if (!(page === "index.html" || page === "")) return;
+
+  const revealTargets = Array.from(document.querySelectorAll(".service-card, .testimonial-card, .step-card, .cred-card"));
+  if (!revealTargets.length) return;
+
+  revealTargets.forEach((element) => element.classList.add("reveal-up"));
+
+  if (typeof IntersectionObserver === "undefined") {
+    revealTargets.forEach((element) => element.classList.add("is-visible"));
+    return;
+  }
+
+  const observer = new IntersectionObserver((entries, obs) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add("is-visible");
+      obs.unobserve(entry.target);
+    });
+  }, {
+    threshold: 0.16,
+    rootMargin: "0px 0px -40px 0px"
+  });
+
+  revealTargets.forEach((element) => observer.observe(element));
+}
+
 function setupBookingSearch() {
   const searchBtn = document.getElementById("searchBookingByMobile");
   const clearBtn = document.getElementById("clearBookingSearch");
@@ -3835,6 +3863,7 @@ async function init() {
   refreshServiceDependentViews();
   mountRecentBookings();
   mountTestimonials();
+  setupRichHomepageEffects();
   setupBookingSubmit();
   setupContactForm();
   setupReviewForm();
