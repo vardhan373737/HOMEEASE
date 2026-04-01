@@ -22,6 +22,42 @@
     gtag("js", new Date());
     gtag("config", "G-522LECFTCD", { anonymize_ip: true });
   </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://www.homease.tech/booking.html#breadcrumb",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.homease.tech/" },
+            { "@type": "ListItem", "position": 2, "name": "Booking", "item": "https://www.homease.tech/booking.html" }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://www.homease.tech/booking.html#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How do I confirm a booking?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Fill the booking form, review the estimated price, and submit your request to confirm." }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I update my booking details later?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. Contact support and we can help update details or reschedule where possible." }
+            },
+            {
+              "@type": "Question",
+              "name": "Do I need an account to book?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Bookings work best with an account so your details can be saved and tracked." }
+            }
+          ]
+        }
+      ]
+    }
+  </script>
 </head>
 <body>
   <header class="navbar">
@@ -80,6 +116,15 @@
       </div>
       <p id="bookingSearchMessage" class="form-message" style="margin-bottom: 1rem;"></p>
       <div id="bookingsContainer"></div>
+    </section>
+
+    <section class="faq-section" style="margin-top: 2.5rem;">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-grid">
+        <article class="faq-card"><h3>How do I confirm a booking?</h3><p>Complete the form and submit it after reviewing the estimated price.</p></article>
+        <article class="faq-card"><h3>Can I reschedule later?</h3><p>Yes, contact support and we’ll help with available reschedule options.</p></article>
+        <article class="faq-card"><h3>Do I need an account?</h3><p>An account helps save your details and keep bookings easier to manage.</p></article>
+      </div>
     </section>
   </main>
 

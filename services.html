@@ -22,6 +22,54 @@
     gtag("js", new Date());
     gtag("config", "G-522LECFTCD", { anonymize_ip: true });
   </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://www.homease.tech/services.html#breadcrumb",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.homease.tech/" },
+            { "@type": "ListItem", "position": 2, "name": "Services", "item": "https://www.homease.tech/services.html" }
+          ]
+        },
+        {
+          "@type": "Service",
+          "@id": "https://www.homease.tech/services.html#service",
+          "name": "HomeEase Services",
+          "serviceType": ["Cleaning", "Plumbing", "Electrical", "Appliance Repair", "Painting"],
+          "provider": {
+            "@type": "Organization",
+            "name": "HomeEase Services",
+            "url": "https://www.homease.tech/"
+          },
+          "areaServed": { "@type": "Country", "name": "India" }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://www.homease.tech/services.html#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Which services are most popular?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Popular services include AC repair, plumbing, electrical work, cleaning, and appliance repair." }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I book services for the same day?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Same-day bookings may be available depending on service type and technician availability." }
+            },
+            {
+              "@type": "Question",
+              "name": "Do you serve multiple service categories?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes, HomeEase offers multiple home service categories from one platform." }
+            }
+          ]
+        }
+      ]
+    }
+  </script>
 </head>
 <body>
   <header class="navbar">
@@ -51,6 +99,15 @@
     </div>
 
     <div class="service-grid" id="serviceCards"></div>
+
+    <section class="faq-section" style="margin-top: 3rem;">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-grid">
+        <article class="faq-card"><h3>Which services are most popular?</h3><p>AC repair, plumbing, electrical work, cleaning, and appliance repair are the most requested.</p></article>
+        <article class="faq-card"><h3>Can I book same-day service?</h3><p>Same-day availability depends on technician schedules and your location.</p></article>
+        <article class="faq-card"><h3>Do you cover multiple service categories?</h3><p>Yes, you can choose from many home service categories in one place.</p></article>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">

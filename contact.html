@@ -22,6 +22,42 @@
     gtag("js", new Date());
     gtag("config", "G-522LECFTCD", { anonymize_ip: true });
   </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://www.homease.tech/contact.html#breadcrumb",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.homease.tech/" },
+            { "@type": "ListItem", "position": 2, "name": "Contact", "item": "https://www.homease.tech/contact.html" }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://www.homease.tech/contact.html#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How fast do you respond to contact requests?",
+              "acceptedAnswer": { "@type": "Answer", "text": "We aim to respond as quickly as possible, especially for active bookings and urgent requests." }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I contact you about pricing?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes, our support team can clarify pricing, estimates, and invoice-related questions." }
+            },
+            {
+              "@type": "Question",
+              "name": "What if I need help after booking?",
+              "acceptedAnswer": { "@type": "Answer", "text": "You can contact support for booking changes, follow-up, or service concerns." }
+            }
+          ]
+        }
+      ]
+    }
+  </script>
 </head>
 <body>
   <header class="navbar">
@@ -130,6 +166,15 @@
             referrerpolicy="no-referrer-when-downgrade"
             allowfullscreen></iframe>
         </div>
+      </div>
+    </section>
+
+    <section class="faq-section" style="margin: 3rem 0 0;">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-grid">
+        <article class="faq-card"><h3>How fast do you respond?</h3><p>We prioritize active bookings and urgent requests first.</p></article>
+        <article class="faq-card"><h3>Can I ask about pricing?</h3><p>Yes. Our support team can answer estimate and invoice questions.</p></article>
+        <article class="faq-card"><h3>What if I need help after booking?</h3><p>Contact us and we’ll help with booking changes or service concerns.</p></article>
       </div>
     </section>
   </main>
