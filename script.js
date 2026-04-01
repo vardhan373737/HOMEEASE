@@ -46,6 +46,20 @@ const chatNotificationState = {
   admin: {}
 };
 
+function trackGaEvent(eventName, params = {}) {
+  if (!eventName || typeof window === "undefined") return;
+  if (typeof window.gtag !== "function") return;
+
+  try {
+    window.gtag("event", eventName, {
+      ...params,
+      page_path: window.location.pathname
+    });
+  } catch (error) {
+    // Ignore analytics errors so UX is not impacted.
+  }
+}
+
 function normalizeProviderWorkSelection(rawValue) {
   const lookup = new Map(getProviderWorkServiceNames().map((name) => [name.toLowerCase(), name]));
   const seen = new Set();
@@ -3167,6 +3181,15 @@ function setupBookingSubmit() {
       const data = await res.json();
       msgEl.textContent = "Booking confirmed! ID: " + data.id;
       msgEl.style.color = "var(--primary-dark)";
+
+      const bookingValue = Number(price);
+      trackGaEvent("booking_submitted", {
+        service_type: serviceType,
+        user_role: currentUser?.role || "guest",
+        value: Number.isFinite(bookingValue) ? bookingValue : undefined,
+        currency: "INR"
+      });
+
       const existing = JSON.parse(localStorage.getItem("bookings") || "[]");
       localStorage.setItem("bookings", JSON.stringify([...existing, payload]));
       mountRecentBookings();
@@ -3212,6 +3235,11 @@ function setupContactForm() {
       if (!res.ok) throw new Error(data.message || "Submit failed");
       status.textContent = "Message sent! We'll contact you soon.";
       status.style.color = "var(--primary-dark)";
+
+      trackGaEvent("contact_submitted", {
+        contact_subject: subject || "general"
+      });
+
       form.reset();
     } catch (err) {
       status.textContent = err.message;
@@ -3319,6 +3347,11 @@ function setupAuth() {
         localStorage.setItem("homeease_access_token", data.accessToken);
         localStorage.setItem("homeease_refresh_token", data.refreshToken);
         localStorage.setItem("homeease_user", JSON.stringify(data.user));
+
+        trackGaEvent("user_registered", {
+          user_role: data?.user?.role || role || "unknown"
+        });
+
         messageEl.style.color = "var(--primary-dark)";
         if (data.user.role === "user" || data.user.role === "provider") {
           messageEl.textContent = "Account created successfully! Pending admin approval. Admin will approve within 72 hours.";
@@ -3357,6 +3390,11 @@ function setupAuth() {
         localStorage.setItem("homeease_access_token", data.accessToken);
         localStorage.setItem("homeease_refresh_token", data.refreshToken);
         localStorage.setItem("homeease_user", JSON.stringify(data.user));
+
+        trackGaEvent("user_logged_in", {
+          user_role: data?.user?.role || "unknown"
+        });
+
         messageEl.style.color = "var(--primary-dark)";
         messageEl.textContent = "Logged in successfully! Redirecting...";
         setTimeout(() => {
