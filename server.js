@@ -6,22 +6,46 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
+const rateLimit = require("express-rate-limit");
 const { v2: cloudinary } = require("cloudinary");
 const dotenv = require("dotenv");
 
 dotenv.config();
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = String(process.env.MONGO_URI || "").trim();
+const JWT_SECRET = String(process.env.JWT_SECRET || "").trim();
+const JWT_REFRESH_SECRET = String(process.env.JWT_REFRESH_SECRET || "").trim();
 const isVercel = Boolean(process.env.VERCEL);
 const CLOUDINARY_CLOUD_NAME = String(process.env.CLOUDINARY_CLOUD_NAME || "").trim();
 const CLOUDINARY_API_KEY = String(process.env.CLOUDINARY_API_KEY || "").trim();
 const CLOUDINARY_API_SECRET = String(process.env.CLOUDINARY_API_SECRET || "").trim();
 const cloudinaryEnabled = Boolean(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET);
+
+if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+  throw new Error("JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables.");
+}
+
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many authentication attempts. Please try again in 15 minutes." }
+});
+
+const publicWriteRateLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests. Please try again shortly." }
+});
 
 if (cloudinaryEnabled) {
   cloudinary.config({
@@ -99,6 +123,176 @@ function normalizeServicePayload(payload = {}) {
       icon,
       desc,
       price: Math.round(price)
+    }
+  };
+}
+
+function isValidDateInput(value) {
+  const dateText = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateText)) return false;
+  const parsed = new Date(`${dateText}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime());
+}
+
+function validateBookingPayload(payload = {}) {
+  const name = String(payload.name || "").trim();
+  const phone = String(payload.phone || "").trim();
+  const address = String(payload.address || "").trim();
+  const date = String(payload.date || "").trim();
+  const serviceType = String(payload.serviceType || "").trim();
+  const notes = String(payload.notes || "").trim();
+
+  if (name.length < 2 || name.length > 80) {
+    return { error: "Name must be between 2 and 80 characters" };
+  }
+  if (!/^\d{10}$/.test(phone)) {
+    return { error: "Phone must be a 10-digit number" };
+  }
+  if (address.length < 5 || address.length > 250) {
+    return { error: "Address must be between 5 and 250 characters" };
+  }
+  if (!isValidDateInput(date)) {
+    return { error: "Date must be in YYYY-MM-DD format" };
+  }
+  if (!serviceType || serviceType.length > 120) {
+    return { error: "Service type is required" };
+  }
+  if (notes.length > 500) {
+    return { error: "Notes must be 500 characters or fewer" };
+  }
+
+  return {
+    value: {
+      name,
+      phone,
+      address,
+      date,
+      serviceType,
+      notes
+    }
+  };
+}
+
+function validateContactPayload(payload = {}) {
+  const name = String(payload.name || "").trim();
+  const email = String(payload.email || "").trim().toLowerCase();
+  const phone = String(payload.phone || "").trim();
+  const subject = String(payload.subject || "").trim();
+  const message = String(payload.message || "").trim();
+
+  if (name.length < 2 || name.length > 80) {
+    return { error: "Name must be between 2 and 80 characters" };
+  }
+  if (!/^[\w-+.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+    return { error: "Invalid email format" };
+  }
+  if (!/^\d{10}$/.test(phone)) {
+    return { error: "Phone must be a 10-digit number" };
+  }
+  if (subject.length < 3 || subject.length > 120) {
+    return { error: "Subject must be between 3 and 120 characters" };
+  }
+  if (message.length < 5 || message.length > 2000) {
+    return { error: "Message must be between 5 and 2000 characters" };
+  }
+
+  return {
+    value: {
+      name,
+      email,
+      phone,
+      subject,
+      message
+    }
+  };
+}
+
+function validateTestimonialPayload(payload = {}) {
+  const name = String(payload.name || "").trim();
+  const content = String(payload.content || "").trim();
+  const ratingValue = payload.rating === undefined || payload.rating === null || payload.rating === ""
+    ? 5
+    : Number(payload.rating);
+
+  if (name.length < 2 || name.length > 80) {
+    return { error: "Name must be between 2 and 80 characters" };
+  }
+  if (content.length < 5 || content.length > 1000) {
+    return { error: "Review content must be between 5 and 1000 characters" };
+  }
+  if (!Number.isInteger(ratingValue) || ratingValue < 1 || ratingValue > 5) {
+    return { error: "Rating must be an integer between 1 and 5" };
+  }
+
+  return {
+    value: {
+      name,
+      content,
+      rating: ratingValue
+    }
+  };
+}
+
+function validateRegisterPayload(payload = {}) {
+  const name = String(payload.name || "").trim();
+  const email = String(payload.email || "").trim().toLowerCase();
+  const phone = String(payload.phone || "").trim();
+  const password = String(payload.password || "");
+  const role = String(payload.role || "").trim().toLowerCase();
+
+  if (name.length < 2 || name.length > 80) {
+    return { error: "Name must be between 2 and 80 characters" };
+  }
+  if (!/^[\w-+.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+    return { error: "Invalid email format" };
+  }
+  if (!/^\d{10}$/.test(phone)) {
+    return { error: "Phone must be a 10-digit number" };
+  }
+  if (password.length < 8 || password.length > 72) {
+    return { error: "Password must be between 8 and 72 characters" };
+  }
+  if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    return { error: "Password must include at least one letter and one number" };
+  }
+  if (!["user", "provider"].includes(role)) {
+    return { error: "Role must be user or provider" };
+  }
+
+  return {
+    value: {
+      name,
+      email,
+      phone,
+      password,
+      role
+    }
+  };
+}
+
+function validateLoginPayload(payload = {}) {
+  const email = String(payload.email || "").trim().toLowerCase();
+  const phone = String(payload.phone || "").trim();
+  const password = String(payload.password || "");
+
+  if (!password) {
+    return { error: "Password is required" };
+  }
+  if (email && !/^[\w-+.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+    return { error: "Please provide a valid email" };
+  }
+  if (phone && !/^\d{10}$/.test(phone)) {
+    return { error: "Please provide a valid 10-digit phone number" };
+  }
+  if (!email && !phone) {
+    return { error: "Email or phone is required" };
+  }
+
+  return {
+    value: {
+      email,
+      phone,
+      password
     }
   };
 }
@@ -661,7 +855,7 @@ const authMiddleware = async (req, res, next) => {
   }
   const token = authHeader.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "homeease-secret");
+    const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(decoded.id).select("name email role work");
     if (!user) return res.status(401).json({ message: "Invalid user" });
     req.user = user;
@@ -845,7 +1039,7 @@ app.get("/api/stream/bookings", async (req, res) => {
       return res.status(401).json({ message: "Token is required" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "homeease-secret");
+    const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(decoded.id).select("name email role work");
     if (!user || !["admin", "provider"].includes(user.role)) {
       return res.status(403).json({ message: "Forbidden" });
@@ -877,10 +1071,11 @@ app.get("/api/stream/bookings", async (req, res) => {
 // POST /api/bookings (requires authentication)
 app.post("/api/bookings", authMiddleware, async (req, res) => {
   try {
-    const { name, phone, address, date, serviceType, notes } = req.body;
-    if (!name || !phone || !address || !date || !serviceType) {
-      return res.status(400).json({ message: "Missing required fields." });
+    const parsed = validateBookingPayload(req.body || {});
+    if (parsed.error) {
+      return res.status(400).json({ message: parsed.error });
     }
+    const { name, phone, address, date, serviceType, notes } = parsed.value;
 
     const service = await resolveServiceForBooking(serviceType);
     if (!service) {
@@ -945,16 +1140,13 @@ app.get("/api/my-bookings", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Error fetching bookings" });
   }
 });
-app.post("/api/contact", async (req, res) => {
+app.post("/api/contact", publicWriteRateLimiter, async (req, res) => {
   try {
-    const { name, email, phone, subject, message } = req.body;
-    if (!name || !email || !phone || !subject || !message) {
-      return res.status(400).json({ message: "All fields are required" });
+    const parsed = validateContactPayload(req.body || {});
+    if (parsed.error) {
+      return res.status(400).json({ message: parsed.error });
     }
-
-    if (!/^[0-9]{10}$/.test(phone)) {
-      return res.status(400).json({ message: "Phone must be a 10-digit number" });
-    }
+    const { name, email, phone, subject, message } = parsed.value;
 
     const contact = await Contact.create({ name, email, phone, subject, message });
     res.status(201).json(contact);
@@ -964,7 +1156,7 @@ app.post("/api/contact", async (req, res) => {
   }
 });
 
-app.get("/api/contact", authMiddleware, async (req, res) => {
+app.get("/api/contact", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { search } = req.query;
     const cacheKey = `contact:${String(search || "").trim().toLowerCase()}`;
@@ -994,16 +1186,18 @@ app.get("/api/contact", authMiddleware, async (req, res) => {
   }
 });
 
-app.post("/api/testimonials", authMiddleware, async (req, res) => {
+app.post("/api/testimonials", publicWriteRateLimiter, authMiddleware, async (req, res) => {
   try {
-    const { name, content, rating } = req.body;
-    if (!name || !content) {
-      return res.status(400).json({ message: "Name and content are required" });
+    const parsed = validateTestimonialPayload(req.body || {});
+    if (parsed.error) {
+      return res.status(400).json({ message: parsed.error });
     }
+    const { name, content, rating } = parsed.value;
+
     const testimonial = await Testimonial.create({
       name,
       content,
-      rating: rating || 5,
+      rating,
       updatedAt: new Date()
     });
     res.status(201).json(testimonial);
@@ -1109,33 +1303,23 @@ app.delete("/api/admin/testimonials/:id", authMiddleware, adminMiddleware, async
 });
 
 const generateAccessToken = (user) => {
-  return jwt.sign({ id: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET || "homeease-secret", { expiresIn: "15m" });
+  return jwt.sign({ id: user._id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: "15m" });
 };
 
 const generateRefreshToken = async (user) => {
-  const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_REFRESH_SECRET || "homeease-refresh-secret", { expiresIn: "30d" });
+  const token = jwt.sign({ id: user._id, email: user.email }, JWT_REFRESH_SECRET, { expiresIn: "30d" });
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   await RefreshToken.create({ userId: user._id, token, expiresAt });
   return token;
 };
 
-app.post("/api/register", async (req, res) => {
+app.post("/api/register", authRateLimiter, async (req, res) => {
   try {
-    const { name, email, phone, password, role } = req.body;
-    if (!name || !email || !phone || !password || !role) {
-      return res.status(400).json({ message: "Name, email, phone, password, and role are required" });
+    const parsed = validateRegisterPayload(req.body || {});
+    if (parsed.error) {
+      return res.status(400).json({ message: parsed.error });
     }
-    if (!["user", "provider", "admin"].includes(role)) {
-      return res.status(400).json({ message: "Invalid role" });
-    }
-
-    if (!/^[\w-+.]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
-      return res.status(400).json({ message: "Invalid email format" });
-    }
-
-    if (!/^[0-9]{10}$/.test(phone)) {
-      return res.status(400).json({ message: "Phone must be a 10-digit number" });
-    }
+    const { name, email, phone, password, role } = parsed.value;
 
     const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
     if (existingUser) {
@@ -1143,7 +1327,7 @@ app.post("/api/register", async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 11);
-    const status = (role === "user" || role === "provider") ? "pending" : "approved";
+    const status = "pending";
     const user = new User({ name, email, phone, passwordHash, role, status });
     await user.save();
 
@@ -1161,20 +1345,19 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-app.post("/api/login", async (req, res) => {
+app.post("/api/login", authRateLimiter, async (req, res) => {
   try {
-    let { email, phone, password } = req.body;
-    if ((!email && !phone) || !password) {
-      return res.status(400).json({ message: "Email or phone and password are required" });
+    const parsed = validateLoginPayload(req.body || {});
+    if (parsed.error) {
+      return res.status(400).json({ message: parsed.error });
     }
+    const { email, phone, password } = parsed.value;
 
     let query;
-    if (phone && /^[0-9]{10}$/.test(phone)) {
+    if (phone) {
       query = { phone };
-    } else if (email) {
-      query = { email };
     } else {
-      return res.status(400).json({ message: "Please provide a valid email or 10-digit phone number" });
+      query = { email };
     }
 
     const user = await User.findOne(query);
@@ -1204,7 +1387,7 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-app.post("/api/refresh-token", async (req, res) => {
+app.post("/api/refresh-token", authRateLimiter, async (req, res) => {
   const { refreshToken } = req.body;
   if (!refreshToken) return res.status(400).json({ message: "Refresh token is required" });
   try {
@@ -1213,7 +1396,7 @@ app.post("/api/refresh-token", async (req, res) => {
       return res.status(401).json({ message: "Refresh token invalid or expired" });
     }
 
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || "homeease-refresh-secret");
+    const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ message: "User not found" });
 

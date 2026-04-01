@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /adminuser.html
+Disallow: /adminrating.html
+Disallow: /serviceadmin.html
+Disallow: /contactadmin.html
+Disallow: /provider.html
+Disallow: /api/
+
+Sitemap: https://homease.tech/sitemap.xml
