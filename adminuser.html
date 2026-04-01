@@ -8,13 +8,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous"></script>
+  <script src="https://kit.fontawesome.com/a81368914c.js" crossorigin="anonymous" defer></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-522LECFTCD"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
+    gtag("consent", "default", {
+      analytics_storage: "denied",
+      ad_storage: "denied",
+      ad_user_data: "denied",
+      ad_personalization: "denied"
+    });
     gtag("js", new Date());
-    gtag("config", "G-522LECFTCD");
+    gtag("config", "G-522LECFTCD", { anonymize_ip: true });
   </script>
 </head>
 <body class="admin-nav-page admin-home-page">

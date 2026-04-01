@@ -46,6 +46,69 @@ const chatNotificationState = {
   admin: {}
 };
 
+const CONSENT_STORAGE_KEY = "homeease_cookie_consent";
+
+function updateGaConsent(consent) {
+  if (typeof window === "undefined" || typeof window.gtag !== "function") return;
+  const granted = consent === "accepted";
+  window.gtag("consent", "update", {
+    analytics_storage: granted ? "granted" : "denied",
+    ad_storage: "denied",
+    ad_user_data: "denied",
+    ad_personalization: "denied"
+  });
+}
+
+function applySavedConsent() {
+  const saved = localStorage.getItem(CONSENT_STORAGE_KEY);
+  if (saved === "accepted" || saved === "rejected") {
+    updateGaConsent(saved);
+  }
+}
+
+function setupConsentBanner() {
+  const existing = localStorage.getItem(CONSENT_STORAGE_KEY);
+  if (existing === "accepted" || existing === "rejected") return;
+
+  const banner = document.createElement("div");
+  banner.id = "cookieConsentBanner";
+  banner.style.position = "fixed";
+  banner.style.left = "16px";
+  banner.style.right = "16px";
+  banner.style.bottom = "16px";
+  banner.style.zIndex = "10000";
+  banner.style.background = "#0f172a";
+  banner.style.color = "#e5e7eb";
+  banner.style.border = "1px solid rgba(148,163,184,0.35)";
+  banner.style.borderRadius = "14px";
+  banner.style.padding = "14px 16px";
+  banner.style.boxShadow = "0 10px 30px rgba(2,6,23,0.35)";
+  banner.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;">
+      <p style="margin:0;line-height:1.45;font-size:0.92rem;max-width:780px;">
+        We use analytics cookies to improve service quality and website performance.
+      </p>
+      <div style="display:flex;gap:8px;">
+        <button id="cookieDeclineBtn" type="button" style="padding:8px 12px;border-radius:8px;border:1px solid #334155;background:transparent;color:#e5e7eb;cursor:pointer;">Reject</button>
+        <button id="cookieAcceptBtn" type="button" style="padding:8px 12px;border-radius:8px;border:0;background:#14b8a6;color:#042f2e;font-weight:700;cursor:pointer;">Accept</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(banner);
+
+  const finalizeConsent = (value) => {
+    localStorage.setItem(CONSENT_STORAGE_KEY, value);
+    updateGaConsent(value);
+    banner.remove();
+  };
+
+  const acceptBtn = banner.querySelector("#cookieAcceptBtn");
+  const declineBtn = banner.querySelector("#cookieDeclineBtn");
+  if (acceptBtn) acceptBtn.addEventListener("click", () => finalizeConsent("accepted"));
+  if (declineBtn) declineBtn.addEventListener("click", () => finalizeConsent("rejected"));
+}
+
 function trackGaEvent(eventName, params = {}) {
   if (!eventName || typeof window === "undefined") return;
   if (typeof window.gtag !== "function") return;
@@ -3750,6 +3813,8 @@ function setupBookingLiveUpdates(page) {
 async function init() {
   const page = window.location.pathname.split("/").pop();
   const user = getCurrentUser();
+  applySavedConsent();
+  setupConsentBanner();
   checkSystemHealth(page);
 
   const adminChatPages = new Set([

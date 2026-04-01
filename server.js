@@ -625,9 +625,31 @@ async function connectDatabase() {
 startupDiagnostics();
 connectDatabase();
 
+function setStaticCacheHeaders(res, filePath) {
+  const ext = path.extname(String(filePath || "")).toLowerCase();
+  const longCacheExt = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".ico", ".woff", ".woff2"]);
+  const mediumCacheExt = new Set([".css", ".js"]);
+
+  if (longCacheExt.has(ext)) {
+    res.setHeader("Cache-Control", "public, max-age=604800");
+    return;
+  }
+  if (mediumCacheExt.has(ext)) {
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return;
+  }
+  if (ext === ".html") {
+    res.setHeader("Cache-Control", "no-cache");
+  }
+}
+
 // Serve frontend static files
-app.use(express.static(path.join(__dirname)));
-app.use("/uploads", express.static(uploadsRootDir));
+app.use(express.static(path.join(__dirname), {
+  setHeaders: setStaticCacheHeaders
+}));
+app.use("/uploads", express.static(uploadsRootDir, {
+  setHeaders: setStaticCacheHeaders
+}));
 
 app.use("/api", (req, res, next) => {
   res.setHeader("X-HomeEase-Storage-Mode", dbStatus.mode);
@@ -2433,7 +2455,15 @@ app.get("/api/provider/stats", authMiddleware, async (req, res) => {
 });
 
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  if (req.path === "/") {
+    return res.sendFile(path.join(__dirname, "index.html"));
+  }
+
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({ message: "Route not found" });
+  }
+
+  return res.status(404).sendFile(path.join(__dirname, "404.html"));
 });
 
 if (!isVercel) {
