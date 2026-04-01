@@ -19,19 +19,6 @@
   "routes": [
     {
       "src": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "www.homease.tech"
-        }
-      ],
-      "status": 308,
-      "headers": {
-        "Location": "https://homease.tech/$1"
-      }
-    },
-    {
-      "src": "/(.*)",
       "headers": {
         "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
         "X-Content-Type-Options": "nosniff",

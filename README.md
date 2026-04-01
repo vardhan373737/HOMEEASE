@@ -84,8 +84,8 @@ npm run dev
 
 ## Deployment and SEO
 
-- Canonical production domain: `https://homease.tech`
-- `www.homease.tech` is redirected permanently to apex domain.
+- Canonical production domain: `https://www.homease.tech`
+- `homease.tech` is redirected to `www.homease.tech`.
 - Static crawl files are available at `/robots.txt` and `/sitemap.xml`.
 - Security headers include HSTS, no-sniff, frame deny, referrer policy, permissions policy, and CSP in report-only mode.
 

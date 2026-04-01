@@ -8,4 +8,4 @@ Disallow: /contactadmin.html
 Disallow: /provider.html
 Disallow: /api/
 
-Sitemap: https://homease.tech/sitemap.xml
+Sitemap: https://www.homease.tech/sitemap.xml
